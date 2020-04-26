@@ -1,0 +1,45 @@
+# 第一行为通用配置
+spring:
+  profiles:
+    # active=谁，就激活哪个环境
+    active: dev
+  datasource:
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/content_center?useUnicode=true&serverTimezone=UTC&useSSL=false&characterEncoding=utf-8
+  application:
+    name: content-center
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+info:
+  appname: content-center
+  author: qiaotong
+  version: 0.1
+---
+# 开发环境
+server:
+  port: 8080
+spring:
+  profiles: dev
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 192.168.128.128:8848
+        namespace: ad25f90b-b56d-4dfa-80a7-c503830cea33
+        cluster-name: NX
+---
+# 生产环境
+spring:
+  profiles: prod
+server:
+  tomcat:
+    max-connections: 1000
+    max-threads: 300
