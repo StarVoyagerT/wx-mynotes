@@ -6,6 +6,7 @@ import com.mynotes.usercenter.dao.user.UserMapper;
 import com.mynotes.usercenter.domain.entity.user.User;
 import com.mynotes.usercenter.service.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +21,7 @@ import javax.annotation.Resource;
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
+@Slf4j
 public class UserController {
 
     private final UserMapper userMapper;
@@ -35,6 +37,7 @@ public class UserController {
         User user = userService.selectById(id);
         Result<User> result;
 
+        log.info("我被调用了");
         if(user!=null)
         {
             result=new Result<>(ResultEnum.REQUEST_SUCCESS,user);
