@@ -23,7 +23,6 @@ public class ShareController {
     private final ShareService shareService;
 
     @GetMapping("/{id}")
-    @ResponseBody
     public Result<ShareDTO> selectShareById(@PathVariable("id") Integer id)
     {
         ShareDTO shareDTO = null;

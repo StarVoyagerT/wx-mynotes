@@ -15,7 +15,6 @@ import org.springframework.util.CollectionUtils;
 
 import javax.annotation.Resource;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -39,53 +38,41 @@ public class NacosSameClusterWeightedRule extends AbstractLoadBalancerRule {
     @Override
     public Server choose(Object key) {
         BaseLoadBalancer loadBalancer = (BaseLoadBalancer) this.getLoadBalancer();
-        //获取提供者服务名称
+        //最终被选中的实例
+        Instance instanceBeChoose = null;
+        //获取服务名称
         String name = loadBalancer.getName();
-        //获取集群名称
-        String clusterName = nacosDiscoveryProperties.getClusterName();
-        Map<String, String> metadata = nacosDiscoveryProperties.getMetadata();
-        //获取对应的版本
-        String targetVersion = metadata.get("target-version");
-
         //获取名称服务
         NamingService namingService = nacosDiscoveryProperties.namingServiceInstance();
+        //获取集群名称
+        String clusterName = nacosDiscoveryProperties.getClusterName();
         try {
-            //最终被选择的instances
-            List<Instance> instancesToBeChose;
-
-            //1.根据服务名，获取目标服务的所有实例 A
-            List<Instance> instances = namingService.selectInstances(name,true);
-
-            //2.筛选相同集群的服务 B
-            List<Instance> sameInstances = instances.stream()
+            //1.获取所有指定服务的实例 A
+            List<Instance> allInstances = namingService.getAllInstances(name,true);
+            //2.筛选所有相应集群的实例 B
+            List<Instance> clusterInstances = allInstances.stream()
                     .filter(instance -> Objects.equals(instance.getClusterName(), clusterName))
-                    //筛选版本信息
-                    .filter(instance -> Objects.equals(instance.getMetadata().get("version"),targetVersion))
                     .collect(Collectors.toList());
-
-            //3.如果没有相同集群的服务，则返回A
-            if(CollectionUtils.isEmpty(sameInstances))
+            //3.判断是否为空 如果为空 根据A来返回一个实例
+            if(CollectionUtils.isEmpty(clusterInstances))
             {
-                instancesToBeChose=instances;
-                log.warn("发生跨集群调用，serviceName：{}，clusterName：{}，instances：{}",
-                        name,
-                        clusterName,
-                        instances
-                );
+                log.warn("正在发生跨级群调用，服务：{}，实例列表：{}",name,allInstances);
+                instanceBeChoose = ExtendsBalancer.getHostByRandomWeightExtends(allInstances);
             }
-            //4.否则根据权重返回 B
-            else {
-                instancesToBeChose=sameInstances;
+            //4.如果不为空，根据A来
+            else{
+                instanceBeChoose = ExtendsBalancer.getHostByRandomWeightExtends(clusterInstances);
             }
-            Instance instance = ExtendsBalancer.getHostByRandomWeightExtends(instancesToBeChose);
-            log.info("选择的服务实例是：{}:{}，权重：{}，",instance.getIp(),instance.getPort(),instance.getWeight());
-            return new NacosServer(instance);
+            return new NacosServer(instanceBeChoose);
         } catch (NacosException e) {
-            log.error(e.getMessage());
+            log.info(e.toString());
             return null;
         }
     }
 }
+/**
+ * 这是一个技巧，当源码的某个方法不是public的，可以通过内部类继承来简单包装该方法
+ */
 class ExtendsBalancer extends Balancer{
     public static Instance getHostByRandomWeightExtends(List<Instance> hosts) {
         return getHostByRandomWeight(hosts);
