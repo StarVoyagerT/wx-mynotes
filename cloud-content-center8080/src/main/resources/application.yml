@@ -23,24 +23,66 @@ info:
   appname: content-center
   author: qiaotong
   version: 0.1
+rocketmq:
+  # 设置名称服务
+  name-server: 127.0.0.1:9876
+  # 配置消费者，组必须设置，否则会报错
+  producer:
+    group: producer-group
 ---
 # 开发环境
 server:
-  port: 8080
+  port: 8081
 spring:
   profiles: dev
   cloud:
     nacos:
       discovery:
-        server-addr: 192.168.1.10:8848
+        server-addr: 127.0.0.1:8848
         namespace: ad25f90b-b56d-4dfa-80a7-c503830cea33
         cluster-name: NX
-#user-center:
-#  ribbon:
-#    NFloadBalancerRuleClassName: com.mynotes.contentcenter.config.NacosWeightedRule
+    sentinel:
+      transport:
+        # 指定控制台的地址
+        dashboard: localhost:8080
+      datasource:
+        # 名称随意
+        flow:
+          nacos:
+            server-addr: 127.0.0.1:8848
+            dataId: ${spring.application.name}-flow-rules
+            # 组
+            groupId: DEFAULT_GROUP
+            # 要读取的配置数据类型
+            data-type: json
+            # 规则类型，取值见：
+            # org.springframework.cloud.alibaba.sentinel.datasource.RuleType
+            rule-type: flow
+      filter:
+        enabled: true
+user-center:
+  ribbon:
+    NFloadBalancerRuleClassName: com.mynotes.contentcenter.config.NacosWeightedRule
 ribbon:
   eager-load:
     enabled: true
+feign:
+  client:
+    config:
+      #全局日志打印配置
+      default:
+        loggerLevel: basic
+  #使用httpclient发送请求，而不是原生的urlConnection
+  httpclient:
+    enabled: true
+    max-connections: 200
+    max-connections-per-route: 50
+  #为feign整合sentinel
+  sentinel:
+    enabled: true
+logging:
+  level:
+    com.mynotes.contentcenter.feignclient.UserCenterClient: debug
 ---
 # 生产环境
 spring:

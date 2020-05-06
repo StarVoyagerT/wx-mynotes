@@ -1,6 +1,6 @@
 package com.mynotes.usercenter.controller;
 
-import com.mynotes.commons.entity.Result;
+import com.mynotes.commons.domain.entity.Result;
 import com.mynotes.commons.enums.ResultEnum;
 import com.mynotes.usercenter.dao.user.UserMapper;
 import com.mynotes.usercenter.domain.entity.user.User;
@@ -31,7 +31,7 @@ public class UserController {
 
     @GetMapping("/{id}")
     @ResponseBody
-    public Result<User> selectUserById(@PathVariable("id") Integer id)
+    public User selectUserById(@PathVariable("id") Integer id)
     {
         User user = userService.selectById(id);
         Result<User> result;
@@ -42,6 +42,6 @@ public class UserController {
         }else {
             result=new Result<>(ResultEnum.REQUEST_FAIL,null);
         }
-        return result;
+        return user;
     }
 }

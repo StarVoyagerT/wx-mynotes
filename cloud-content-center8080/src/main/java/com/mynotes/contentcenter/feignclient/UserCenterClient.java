@@ -1,10 +1,10 @@
-package com.mynotes.contentcenter.feign.client;
+package com.mynotes.contentcenter.feignclient;
 
 import com.mynotes.contentcenter.domain.dto.user.UserDTO;
+import com.mynotes.contentcenter.feignclient.fallbackfactory.UserCenterClientFallbackFactory;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
 
 /**
  * @Author: 乔童
@@ -12,9 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
  * @Date: 2020/04/27 20:51
  * @Version: 1.0
  */
-@FeignClient(value = "user-center")
-@RequestMapping("/users")
-public interface UserCenterClient {
-    @GetMapping("/{id}")
+@FeignClient(value = "user-center",fallbackFactory = UserCenterClientFallbackFactory.class)
+public interface UserCenterClient{
+    @GetMapping(value = "/users/{id}")
     UserDTO selectUserById(@PathVariable("id") Integer id);
 }

@@ -1,13 +1,17 @@
 package com.mynotes.contentcenter.controller;
 
 import com.alibaba.nacos.api.exception.NacosException;
-import com.mynotes.commons.entity.Result;
+import com.mynotes.commons.domain.entity.Result;
 import com.mynotes.commons.enums.ResultEnum;
 import com.mynotes.contentcenter.domain.dto.content.ShareDTO;
 import com.mynotes.contentcenter.service.content.ShareService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * @Author: 乔童
@@ -18,11 +22,12 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/shares")
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
+@Slf4j
 public class ShareController {
 
     private final ShareService shareService;
 
-    @GetMapping("/{id}")
+    @GetMapping(value = "/{id}",produces = ("application/json;charset=utf-8"))
     public Result<ShareDTO> selectShareById(@PathVariable("id") Integer id)
     {
         ShareDTO shareDTO = null;
@@ -38,6 +43,7 @@ public class ShareController {
         }else {
             result=new Result<>(ResultEnum.REQUEST_FAIL,null);
         }
+        log.info("请求返回值：{}",result);
         return result;
     }
 

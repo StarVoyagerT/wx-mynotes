@@ -1,4 +1,4 @@
-package com.mynotes.commons.entity;
+package com.mynotes.commons.domain.entity;
 
 import com.mynotes.commons.enums.ResultEnum;
 import lombok.AllArgsConstructor;

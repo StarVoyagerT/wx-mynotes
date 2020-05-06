@@ -1,7 +1,9 @@
 package com.mynotes.contentcenter.service.content;
 
 import com.alibaba.nacos.api.exception.NacosException;
+import com.mynotes.contentcenter.domain.dto.content.ShareAuditDTO;
 import com.mynotes.contentcenter.domain.dto.content.ShareDTO;
+import com.mynotes.contentcenter.domain.entity.content.Share;
 
 /**
  * @Author: 乔童
@@ -11,4 +13,6 @@ import com.mynotes.contentcenter.domain.dto.content.ShareDTO;
  */
 public interface ShareService {
     ShareDTO selectShareById(Integer id) throws NacosException;
+
+    Share auditById(Integer id, ShareAuditDTO auditDTO);
 }
