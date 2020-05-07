@@ -1,4 +1,4 @@
-/*
+package com.mynotes.usercenter.controller;/*
 package com.mynotes.usercenter.controller;
 
 import com.mynotes.usercenter.dao.user.UserMapper;

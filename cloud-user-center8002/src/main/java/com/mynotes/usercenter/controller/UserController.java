@@ -33,10 +33,8 @@ public class UserController {
     @ResponseBody
     public User selectUserById(@PathVariable("id") Integer id)
     {
-
         User user = userService.selectById(id);
         Result<User> result;
-
         log.info("我被调用了");
         if(user!=null)
         {

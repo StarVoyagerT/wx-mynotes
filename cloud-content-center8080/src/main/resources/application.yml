@@ -7,10 +7,19 @@ spring:
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/content_center?useUnicode=true&serverTimezone=UTC&useSSL=false&characterEncoding=utf-8
+    url: jdbc:mysql://localhost:3306/content_center?useUnicode=true&serverTimezone=Asia/Shanghai&useSSL=false&characterEncoding=utf-8
   application:
     name: content-center
+  cloud:
+    stream:
+      rocketmq:
+        binder:
+          name-server: 127.0.0.1:9876
 
+      bindings:
+        output:
+          destination: add-bonus
+#actuator配置
 management:
   endpoint:
     health:
@@ -23,12 +32,12 @@ info:
   appname: content-center
   author: qiaotong
   version: 0.1
+#消息中间件
 rocketmq:
   # 设置名称服务
   name-server: 127.0.0.1:9876
-  # 配置消费者，组必须设置，否则会报错
   producer:
-    group: producer-group
+    group: add-bonus-group
 ---
 # 开发环境
 server:
@@ -36,15 +45,18 @@ server:
 spring:
   profiles: dev
   cloud:
+#   nacos配置
     nacos:
       discovery:
         server-addr: 127.0.0.1:8848
         namespace: ad25f90b-b56d-4dfa-80a7-c503830cea33
         cluster-name: NX
+#   sentinel负载均衡配置
     sentinel:
       transport:
         # 指定控制台的地址
         dashboard: localhost:8080
+      # push模式规则持久化
       datasource:
         # 名称随意
         flow:

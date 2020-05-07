@@ -2,8 +2,12 @@ package com.mynotes.contentcenter.controller;
 
 import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.alibaba.csp.sentinel.slots.block.BlockException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.stream.messaging.Source;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @Slf4j
+@RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class TestController {
     @GetMapping("/test-hot")
     @SentinelResource("hot")
@@ -42,5 +47,16 @@ public class TestController {
     {
         log.warn("限流或者降级了 fallback",e);
         return "限流或者降级了 fallback";
+    }
+    private final Source source;
+
+    @GetMapping("/stream-test-topic")
+    public Object testStream()
+    {
+        source.output()
+                .send(MessageBuilder.withPayload("消息体")
+                .build(),
+                3000);
+        return "success";
     }
 }

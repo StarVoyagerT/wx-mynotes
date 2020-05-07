@@ -15,4 +15,8 @@ public interface ShareService {
     ShareDTO selectShareById(Integer id) throws NacosException;
 
     Share auditById(Integer id, ShareAuditDTO auditDTO);
+
+    void auditByIdInDB(Integer id,ShareAuditDTO auditDTO);
+
+    void auditByIdInRocketMQLog(Integer id,String transactionId,ShareAuditDTO auditDTO);
 }

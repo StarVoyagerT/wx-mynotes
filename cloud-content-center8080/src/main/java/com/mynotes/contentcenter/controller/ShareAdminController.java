@@ -25,7 +25,6 @@ public class ShareAdminController
     public Share auditById(@PathVariable Integer id,@RequestBody ShareAuditDTO auditDTO)
     {
         log.info("审核用户ID：{},审核状态：{}",id,auditDTO);
-        //TODO 认证/授权
         Share share = shareService.auditById(id, auditDTO);
         log.info("审核结果：{}",share.getAuditStatus());
         return share;

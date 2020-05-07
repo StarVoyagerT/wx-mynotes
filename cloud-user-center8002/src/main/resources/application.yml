@@ -5,12 +5,11 @@ spring:
     active: dev
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/user_center?useUnicode=true&serverTimezone=UTC&useSSL=false&characterEncoding=utf-8
+    url: jdbc:mysql://localhost:3306/user_center?useUnicode=true&serverTimezone=Asia/Shanghai&useSSL=false&characterEncoding=utf-8
     username: root
     password: root
   application:
     name: user-center
-
 management:
   endpoint:
     health:
@@ -23,6 +22,8 @@ info:
   appname: user-center
   author: qiaotong
   version: 0.1
+rocketmq:
+  name-server: 127.0.0.1:9876
 ---
 # 开发环境
 spring:

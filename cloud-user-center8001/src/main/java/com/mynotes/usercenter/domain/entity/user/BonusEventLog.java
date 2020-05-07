@@ -1,5 +1,6 @@
 package com.mynotes.usercenter.domain.entity.user;
 
+import lombok.Builder;
 import lombok.Data;
 
 import javax.persistence.Column;
@@ -9,8 +10,9 @@ import javax.persistence.Table;
 import java.util.Date;
 
 @Data
-@Table(name = "user")
-public class User {
+@Builder
+@Table(name = "bonus_event_log")
+public class BonusEventLog {
     /**
      * Id
      */
@@ -19,27 +21,20 @@ public class User {
     private Integer id;
 
     /**
-     * 微信id
+     * user.id
      */
-    @Column(name = "wx_id")
-    private String wxId;
+    @Column(name = "user_id")
+    private Integer userId;
 
     /**
-     * 微信昵称
+     * 积分操作值
      */
-    @Column(name = "wx_nickname")
-    private String wxNickname;
+    private Integer value;
 
     /**
-     * 角色
+     * 发生的事件
      */
-    private String roles;
-
-    /**
-     * 头像地址
-     */
-    @Column(name = "avatar_url")
-    private String avatarUrl;
+    private String event;
 
     /**
      * 创建时间
@@ -48,13 +43,7 @@ public class User {
     private Date createTime;
 
     /**
-     * 修改时间
+     * 描述
      */
-    @Column(name = "update_time")
-    private Date updateTime;
-
-    /**
-     * 积分
-     */
-    private Integer bonus;
+    private String description;
 }
