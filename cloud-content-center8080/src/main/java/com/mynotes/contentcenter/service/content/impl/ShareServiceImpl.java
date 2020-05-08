@@ -1,5 +1,6 @@
 package com.mynotes.contentcenter.service.content.impl;
 
+import com.alibaba.fastjson.JSON;
 import com.mynotes.commons.domain.messaging.UserAddBonusMsgDTO;
 import com.mynotes.contentcenter.dao.content.RocketmqTransactionLogMapper;
 import com.mynotes.contentcenter.dao.content.ShareMapper;
@@ -13,10 +14,10 @@ import com.mynotes.contentcenter.feignclient.UserCenterClient;
 import com.mynotes.contentcenter.service.content.ShareService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.apache.rocketmq.spring.support.RocketMQHeaders;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.stream.messaging.Source;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,9 +38,7 @@ public class ShareServiceImpl implements ShareService {
 
     private final UserCenterClient userCenterClient;
 
-    private final RocketMQTemplate rocketMQTemplate;
-
-//    private final Source source;
+    private final Source source;
 
     private final RocketmqTransactionLogMapper rocketmqTransactionLogMapper;
 
@@ -83,19 +82,16 @@ public class ShareServiceImpl implements ShareService {
          */
         if(AuditStatusEnum.PASS.equals(auditDTO.getAuditStatusEnum()))
         {
-            rocketMQTemplate.sendMessageInTransaction(
-                    "tx-add-bonus-group",
-                    "add-bonus",
-                    MessageBuilder.withPayload(
-                            UserAddBonusMsgDTO.builder()
-                                    .userId(id)
-                                    .bonus(50)
-                                    .build()
-                    )
+            source.output().send(MessageBuilder.withPayload(
+                    UserAddBonusMsgDTO.builder()
+                            .userId(id)
+                            .bonus(50)
+                            .build()
+                     )
                     .setHeader("share_id",id)
-                    .setHeader(RocketMQHeaders.TRANSACTION_ID, UUID.randomUUID().toString())
-                    .build(),
-                    auditDTO);
+                    .setHeader(RocketMQHeaders.TRANSACTION_ID,UUID.randomUUID().toString())
+                    .setHeader("dto", JSON.toJSONString(auditDTO))
+                    .build());
         }
         //如果不是pass，不涉及用户增加积分，直接执行本地事务
         else{

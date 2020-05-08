@@ -17,7 +17,7 @@ spring:
           name-server: 127.0.0.1:9876
       bindings:
         input:
-          destination: stream-test-topic
+          destination: add-bonus
           group: binder-group
 
 management:

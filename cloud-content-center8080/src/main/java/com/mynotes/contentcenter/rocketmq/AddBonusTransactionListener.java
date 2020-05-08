@@ -1,5 +1,6 @@
 package com.mynotes.contentcenter.rocketmq;
 
+import com.alibaba.fastjson.JSON;
 import com.mynotes.contentcenter.dao.content.RocketmqTransactionLogMapper;
 import com.mynotes.contentcenter.domain.dto.content.ShareAuditDTO;
 import com.mynotes.contentcenter.domain.entity.content.RocketmqTransactionLog;
@@ -41,9 +42,13 @@ public class AddBonusTransactionListener implements RocketMQLocalTransactionList
         MessageHeaders headers = message.getHeaders();
         String transactionId = (String) headers.get(RocketMQHeaders.TRANSACTION_ID);
         Integer shareId = Integer.parseInt((String) Objects.requireNonNull(headers.get("share_id")));
+
+        String dtoStr = (String) headers.get("dto");
+        ShareAuditDTO auditDTO = JSON.parseObject(dtoStr, ShareAuditDTO.class);
+
         try {
             //执行本地事务，执行成功后向TransactionLog表中插入记录，之后根据TranscationLog表消息回查
-            shareService.auditByIdInRocketMQLog(shareId,transactionId, (ShareAuditDTO) arg);
+            shareService.auditByIdInRocketMQLog(shareId,transactionId, auditDTO);
             return RocketMQLocalTransactionState.COMMIT;
         } catch (Exception e) {
             log.info("本地事务执行失败，异常信息：{}",e.toString());

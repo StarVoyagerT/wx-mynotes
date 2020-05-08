@@ -21,4 +21,5 @@ public class ContentCenterApplication {
     public static void main(String[] args) {
         SpringApplication.run(ContentCenterApplication.class,args);
     }
+
 }

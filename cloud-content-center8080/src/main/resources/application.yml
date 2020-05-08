@@ -15,7 +15,11 @@ spring:
       rocketmq:
         binder:
           name-server: 127.0.0.1:9876
-
+        bindings:
+          output:
+            producer:
+              transactional: true
+              group: tx-add-bonus-group
       bindings:
         output:
           destination: add-bonus
@@ -95,6 +99,7 @@ feign:
 logging:
   level:
     com.mynotes.contentcenter.feignclient.UserCenterClient: debug
+    com.alibaba.nacos.client.config.impl.ClientWorker: warn
 ---
 # 生产环境
 spring:

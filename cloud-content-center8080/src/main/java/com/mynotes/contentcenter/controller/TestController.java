@@ -7,7 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.messaging.Source;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -50,13 +49,13 @@ public class TestController {
     }
     private final Source source;
 
-    @GetMapping("/stream-test-topic")
+/*    @GetMapping("/stream-test-topic")
     public Object testStream()
     {
         source.output()
-                .send(MessageBuilder.withPayload("消息体")
+                .send(MessageBuilder.withPayload(JSON.toJSON("消息体"))
                 .build(),
                 3000);
         return "success";
-    }
+    }*/
 }
