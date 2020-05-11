@@ -3,6 +3,7 @@ package com.mynotes.usercenter.service.impl;
 import com.mynotes.commons.domain.messaging.UserAddBonusMsgDTO;
 import com.mynotes.usercenter.dao.user.BonusEventLogMapper;
 import com.mynotes.usercenter.dao.user.UserMapper;
+import com.mynotes.usercenter.domain.dto.user.UserLoginRespDTO;
 import com.mynotes.usercenter.domain.entity.user.BonusEventLog;
 import com.mynotes.usercenter.domain.entity.user.User;
 import com.mynotes.usercenter.service.UserService;
@@ -27,6 +28,10 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
 
     private final BonusEventLogMapper bonusEventLogMapper;
+
+    private final Integer INIT_BONUS=300;
+
+    private final String DEFAULT_ROLE ="user";
 
     @Override
     public User selectById(Integer id) {
@@ -53,5 +58,26 @@ public class UserServiceImpl implements UserService {
                         .build()
         );
         log.info("用户添加积分{}",update==1&&insert==1?"成功":"失败");
+    }
+
+    @Override
+    public User login(UserLoginRespDTO loginRespDTO,String openId) {
+        User user = userMapper.selectOne(User.builder()
+                .wxId(openId)
+                .build());
+        if(user==null)
+        {
+            user = User.builder()
+                    .wxId(openId)
+                    .avatarUrl(loginRespDTO.getAvatarUrl())
+                    .wxNickname(loginRespDTO.getWxNickname())
+                    .bonus(INIT_BONUS)
+                    .roles(DEFAULT_ROLE)
+                    .createTime(new Date())
+                    .updateTime(new Date())
+                    .build();
+            userMapper.insertSelective(user);
+        }
+        return user;
     }
 }

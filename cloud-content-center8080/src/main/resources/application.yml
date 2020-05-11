@@ -3,6 +3,7 @@ spring:
   profiles:
     # active=谁，就激活哪个环境
     active: dev
+    include:
   datasource:
     username: root
     password: root
@@ -23,39 +24,13 @@ spring:
       bindings:
         output:
           destination: add-bonus
-#actuator配置
-management:
-  endpoint:
-    health:
-      show-details: always
-  endpoints:
-    web:
-      exposure:
-        include: '*'
-info:
-  appname: content-center
-  author: qiaotong
-  version: 0.1
-#消息中间件
-rocketmq:
-  # 设置名称服务
-  name-server: 127.0.0.1:9876
-  producer:
-    group: add-bonus-group
----
-# 开发环境
-server:
-  port: 8081
-spring:
-  profiles: dev
-  cloud:
-#   nacos配置
+    #   nacos配置
     nacos:
+      server-addr: 127.0.0.1:8848
       discovery:
-        server-addr: 127.0.0.1:8848
         namespace: ad25f90b-b56d-4dfa-80a7-c503830cea33
         cluster-name: NX
-#   sentinel负载均衡配置
+    #   sentinel负载均衡配置
     sentinel:
       transport:
         # 指定控制台的地址
@@ -76,6 +51,32 @@ spring:
             rule-type: flow
       filter:
         enabled: true
+
+#actuator配置
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+info:
+  appname: content-center
+  author: qiaotong
+  version: 0.1
+#消息中间件
+rocketmq:
+  # 设置名称服务
+  name-server: 127.0.0.1:9876
+  producer:
+    group: add-bonus-group
+jwt:
+  secret: aaabbbcccdddeeefffggghhhiiijjjkkklllmmmnnnooopppqqqrrrsssttt
+  expire-time-in-second: 1209600
+# 开发环境
+server:
+  port: 8081
 user-center:
   ribbon:
     NFloadBalancerRuleClassName: com.mynotes.contentcenter.config.NacosWeightedRule
@@ -87,7 +88,9 @@ feign:
     config:
       #全局日志打印配置
       default:
-        loggerLevel: basic
+        loggerLevel: full
+        requestInterceptors:
+          - com.mynotes.contentcenter.feignclient.interceptor.TokenRequestInterceptor
   #使用httpclient发送请求，而不是原生的urlConnection
   httpclient:
     enabled: true

@@ -12,7 +12,9 @@ import org.springframework.web.bind.annotation.PathVariable;
  * @Date: 2020/04/27 20:51
  * @Version: 1.0
  */
-@FeignClient(value = "user-center",fallbackFactory = UserCenterClientFallbackFactory.class)
+@FeignClient(value = "user-center",
+            fallbackFactory = UserCenterClientFallbackFactory.class
+)
 public interface UserCenterClient{
     @GetMapping(value = "/users/{id}")
     UserDTO selectUserById(@PathVariable("id") Integer id);

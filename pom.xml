@@ -7,6 +7,7 @@
         <module>cloud-user-center8002</module>
         <module>cloud-content-center8080</module>
         <module>cloud-commons</module>
+        <module>gateway</module>
     </modules>
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -62,6 +63,11 @@
                 <version>2.1.5</version>
             </dependency>
             <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-starter-gateway</artifactId>
+                <version>2.2.2.RELEASE</version>
+            </dependency>
+            <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
                 <version>1.18.12</version>
@@ -75,6 +81,26 @@
                 <groupId>org.apache.rocketmq</groupId>
                 <artifactId>rocketmq-spring-boot-starter</artifactId>
                 <version>2.0.3</version>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-api</artifactId>
+                <version>0.11.1</version>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-impl</artifactId>
+                <version>0.11.1</version>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-jackson</artifactId>
+                <version>0.11.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.binarywang</groupId>
+                <artifactId>weixin-java-miniapp</artifactId>
+                <version>3.7.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

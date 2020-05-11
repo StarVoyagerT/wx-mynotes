@@ -1,6 +1,7 @@
 package com.mynotes.usercenter.service;
 
 import com.mynotes.commons.domain.messaging.UserAddBonusMsgDTO;
+import com.mynotes.usercenter.domain.dto.user.UserLoginRespDTO;
 import com.mynotes.usercenter.domain.entity.user.User;
 
 /**
@@ -12,4 +13,5 @@ import com.mynotes.usercenter.domain.entity.user.User;
 public interface UserService {
     User selectById(Integer id);
     void addBonus(UserAddBonusMsgDTO userAddBonusMsgDTO);
+    User login(UserLoginRespDTO loginRespDTO,String openId);
 }

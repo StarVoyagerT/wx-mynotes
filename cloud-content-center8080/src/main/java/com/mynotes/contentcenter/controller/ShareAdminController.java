@@ -1,5 +1,7 @@
 package com.mynotes.contentcenter.controller;
 
+import com.mynotes.contentcenter.auth.CheckAuthorize;
+import com.mynotes.contentcenter.auth.CheckLogin;
 import com.mynotes.contentcenter.domain.dto.content.ShareAuditDTO;
 import com.mynotes.contentcenter.domain.entity.content.Share;
 import com.mynotes.contentcenter.service.content.ShareService;
@@ -21,6 +23,9 @@ import org.springframework.web.bind.annotation.*;
 public class ShareAdminController
 {
     private final ShareService shareService;
+
+    @CheckLogin
+    @CheckAuthorize("admin")
     @PutMapping("/audit/{id}")
     public Share auditById(@PathVariable Integer id,@RequestBody ShareAuditDTO auditDTO)
     {

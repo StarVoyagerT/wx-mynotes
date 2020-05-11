@@ -19,7 +19,6 @@ spring:
         input:
           destination: add-bonus
           group: binder-group
-
 management:
   endpoint:
     health:
@@ -34,6 +33,9 @@ info:
   version: 0.1
 rocketmq:
   name-server: 127.0.0.1:9876
+jwt:
+  secret: aaabbbcccdddeeefffggghhhiiijjjkkklllmmmnnnooopppqqqrrrsssttt
+  expire-time-in-second: 1209600
 ---
 # 开发环境
 spring:
