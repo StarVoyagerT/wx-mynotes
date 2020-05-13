@@ -9,7 +9,7 @@ import java.lang.annotation.*;
  * @Version: 1.0
  */
 @Target(ElementType.METHOD)
-@Retention(RetentionPolicy.CLASS)
+@Retention(RetentionPolicy.RUNTIME)
 public @interface CheckAuthorize {
     String value();
 }

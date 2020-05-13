@@ -1,4 +1,4 @@
-package com.mynotes.contentcenter.domain.entity.content;
+package com.mynotes.usercenter.domain.entity.content;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -11,11 +11,6 @@ import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.Map;
 
-/**
- * @Author: 乔童
- * @Date: 2020/05/10 09:14
- * @Version: 1.0
- */
 @Component
 @Slf4j
 public class JwtOperator {

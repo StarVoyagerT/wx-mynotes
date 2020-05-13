@@ -6,8 +6,8 @@ package com.mynotes.usercenter.security;
  * @Date: 2020/05/10 18:40
  * @Version: 1.0
  */
-public class SecurityException extends RuntimeException{
-    public SecurityException(String message) {
+public class CustomSecurityException extends RuntimeException{
+    public CustomSecurityException(String message) {
         super(message);
     }
 }

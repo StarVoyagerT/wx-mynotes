@@ -19,9 +19,15 @@ spring:
           predicates:
             - Path=/users/**
         - id: content_route
-          uri: lb://conent-center
+          uri: lb://content-center
           predicates:
             - Path=/shares/**,/admin/**
+  zipkin:
+    base-url: http://127.0.0.1:9411/
+  sleuth:
+    sampler:
+      #      抽样率，0.1(10%)，这意味着90%的数据都会被丢弃
+      probability: 1.0
 management:
   endpoint:
     health:

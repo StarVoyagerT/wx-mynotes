@@ -1,5 +1,6 @@
 package com.mynotes.usercenter.auth;
 
+import com.mynotes.usercenter.security.CustomSecurityException;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,29 +13,30 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
  * @Author: 乔童
- * @Description: 局部异常处理
- * @Date: 2020/05/10 21:28
+ * @Description: 局部异常处理器
+ * @Date: 2020/05/11 17:12
  * @Version: 1.0
  */
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionErrorHandler {
-    @ExceptionHandler
-    public ResponseEntity<ErrorBody> error(SecurityException e)
+    @ExceptionHandler(CustomSecurityException.class)
+    public ResponseEntity<ErrorBody> error(CustomSecurityException e)
     {
-        log.warn("发生SecurityException异常",e);
+        log.warn("发生SecurityException",e);
         return new ResponseEntity<>(ErrorBody.builder()
-            .body("用户不允许访问！")
-            .Status(HttpStatus.UNAUTHORIZED.value())
-            .build(), HttpStatus.UNAUTHORIZED);
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .body("访问被拒绝！")
+                .build(),
+                HttpStatus.UNAUTHORIZED
+        );
     }
-}
-
-@Data
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
-class ErrorBody{
-    private String body;
-    private int Status;
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    private static class ErrorBody{
+        private Integer status;
+        private String body;
+    }
 }

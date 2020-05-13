@@ -27,7 +27,7 @@ public class AddBonusStreamConsumer {
     @StreamListener(Sink.INPUT)
     public void receive(UserAddBonusMsgDTO bonusMsgDTO)
     {
-        userService.addBonus(bonusMsgDTO);
+        userService.changeBonus(bonusMsgDTO);
     }
 
     @StreamListener("errorChannel")

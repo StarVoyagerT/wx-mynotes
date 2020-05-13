@@ -12,6 +12,6 @@ import com.mynotes.usercenter.domain.entity.user.User;
  */
 public interface UserService {
     User selectById(Integer id);
-    void addBonus(UserAddBonusMsgDTO userAddBonusMsgDTO);
     User login(UserLoginRespDTO loginRespDTO,String openId);
+    User changeBonus(UserAddBonusMsgDTO userAddBonusMsgDTO);
 }

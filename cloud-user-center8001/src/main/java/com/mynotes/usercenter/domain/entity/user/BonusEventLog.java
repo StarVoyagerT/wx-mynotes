@@ -1,7 +1,9 @@
 package com.mynotes.usercenter.domain.entity.user;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import javax.persistence.Column;
 import javax.persistence.GeneratedValue;
@@ -11,6 +13,8 @@ import java.util.Date;
 
 @Data
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
 @Table(name = "bonus_event_log")
 public class BonusEventLog {
     /**

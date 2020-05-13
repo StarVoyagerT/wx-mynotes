@@ -24,6 +24,7 @@ spring:
       bindings:
         output:
           destination: add-bonus
+
     #   nacos配置
     nacos:
       server-addr: 127.0.0.1:8848
@@ -51,7 +52,12 @@ spring:
             rule-type: flow
       filter:
         enabled: true
-
+  zipkin:
+    base-url: http://127.0.0.1:9411/
+  sleuth:
+    sampler:
+      #      抽样率，0.1(10%)，这意味着90%的数据都会被丢弃
+      probability: 1.0
 #actuator配置
 management:
   endpoint:
@@ -102,7 +108,10 @@ feign:
 logging:
   level:
     com.mynotes.contentcenter.feignclient.UserCenterClient: debug
-    com.alibaba.nacos.client.config.impl.ClientWorker: warn
+    org.springframework.cloud.sleuth: debug
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
 ---
 # 生产环境
 spring:

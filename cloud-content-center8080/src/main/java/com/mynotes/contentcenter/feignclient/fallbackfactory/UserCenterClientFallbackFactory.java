@@ -1,5 +1,6 @@
 package com.mynotes.contentcenter.feignclient.fallbackfactory;
 
+import com.mynotes.commons.domain.messaging.UserAddBonusMsgDTO;
 import com.mynotes.contentcenter.domain.dto.user.UserDTO;
 import com.mynotes.contentcenter.feignclient.UserCenterClient;
 import feign.hystrix.FallbackFactory;
@@ -8,7 +9,6 @@ import org.springframework.stereotype.Component;
 
 /**
  * @Author: 乔童
- * @Description:
  * @Date: 2020/05/03 16:03
  * @Version: 1.0
  */
@@ -24,6 +24,12 @@ public class UserCenterClientFallbackFactory implements FallbackFactory<UserCent
                 UserDTO userDTO = new UserDTO();
                 userDTO.setWxNickname("默认用户");
                 return userDTO;
+            }
+
+            @Override
+            public UserDTO changeBonus(UserAddBonusMsgDTO build) {
+                log.info("远程调用被限流/降级了",cause);
+                return null;
             }
         };
     }

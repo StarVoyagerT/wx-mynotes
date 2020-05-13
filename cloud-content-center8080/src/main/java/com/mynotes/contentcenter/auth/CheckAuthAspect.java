@@ -1,5 +1,6 @@
 package com.mynotes.contentcenter.auth;
 
+import com.mynotes.contentcenter.security.CustomSecurityException;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -26,7 +27,7 @@ import java.util.Objects;
 @Aspect
 @Component
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
-public class CheckAuthorizeAspect {
+public class CheckAuthAspect {
     @SneakyThrows
     @Around("@annotation(com.mynotes.contentcenter.auth.CheckAuthorize)")
     public Object authorize(ProceedingJoinPoint point) {
@@ -45,11 +46,11 @@ public class CheckAuthorizeAspect {
             String value=annotation.value();
 
             //4.将登录用户权限与注解参数进行对比，如果不对就直接抛异常拒绝用户继续操作
-            if(!Objects.equals(role,value)){
-                throw new SecurityException("用户无权访问！");
+            if(!Objects.equals(role,value)&&!Objects.equals(role,"admin")){
+                throw new CustomSecurityException("用户无权访问！");
             }
         } catch (Throwable e) {
-            throw new SecurityException("用户无权访问！");
+            throw new CustomSecurityException("用户无权访问！");
         }
         return point.proceed();
     }

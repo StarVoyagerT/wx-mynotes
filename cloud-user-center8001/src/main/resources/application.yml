@@ -1,7 +1,7 @@
 # 第一行为通用配置
 spring:
   profiles:
-    # active=谁，就激活哪个环境6y
+    # active=谁，就激活哪个环境
     active: dev
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -19,6 +19,12 @@ spring:
         input:
           destination: add-bonus
           group: binder-group
+  zipkin:
+    base-url: http://127.0.0.1:9411/
+  sleuth:
+    sampler:
+#      抽样率，0.1(10%)，这意味着90%的数据都会被丢弃
+      probability: 1.0
 management:
   endpoint:
     health:
@@ -36,6 +42,16 @@ rocketmq:
 jwt:
   secret: aaabbbcccdddeeefffggghhhiiijjjkkklllmmmnnnooopppqqqrrrsssttt
   expire-time-in-second: 1209600
+#  日志配置
+logging:
+  level:
+    org.springframework.cloud.sleuth: debug
+feign:
+  client:
+    config:
+      #全局日志打印配置
+      default:
+        loggerLevel: full
 ---
 # 开发环境
 spring:

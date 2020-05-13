@@ -29,44 +29,41 @@ public class UserServiceImpl implements UserService {
 
     private final BonusEventLogMapper bonusEventLogMapper;
 
-    private final Integer INIT_BONUS=300;
+    private final Integer INIT_BONUS = 300;
 
-    private final String DEFAULT_ROLE ="user";
+    private final String DEFAULT_ROLE = "user";
 
     @Override
     public User selectById(Integer id) {
         return userMapper.selectByPrimaryKey(id);
     }
 
-    @Override
     @Transactional(rollbackFor = Exception.class)
-    public void addBonus(UserAddBonusMsgDTO msgDTO) {
-        Integer bonus = msgDTO.getBonus();
-        User user = userMapper.selectByPrimaryKey(msgDTO.getUserId());
+    @Override
+    public User changeBonus(UserAddBonusMsgDTO userAddBonusMsgDTO) {
+        //1.获取用户，计算用户改变之后的积分
+        User user = userMapper.selectByPrimaryKey(userAddBonusMsgDTO.getUserId());
+        Integer bonus = userAddBonusMsgDTO.getBonus();
         user.setBonus(user.getBonus() + bonus);
-
-        //1.更新用户积分
-        int update = userMapper.updateByPrimaryKeySelective(user);
-        //2.插入更新日志
-        int insert = bonusEventLogMapper.insertSelective(
-                BonusEventLog.builder()
-                        .userId(user.getId())
-                        .createTime(new Date())
-                        .value(msgDTO.getBonus())
-                        .event("666666666")
-                        .description("分享加积分")
-                        .build()
-        );
-        log.info("用户添加积分{}",update==1&&insert==1?"成功":"失败");
+        //2.更新用户积分
+        userMapper.updateByPrimaryKey(user);
+        //3.插入消息日志表
+        bonusEventLogMapper.insertSelective(BonusEventLog.builder()
+                .userId(userAddBonusMsgDTO.getUserId())
+                .value(bonus)
+                .description(userAddBonusMsgDTO.getDescription())
+                .event(userAddBonusMsgDTO.getEvent())
+                .createTime(new Date())
+                .build());
+        return userMapper.selectByPrimaryKey(userAddBonusMsgDTO.getUserId());
     }
 
     @Override
-    public User login(UserLoginRespDTO loginRespDTO,String openId) {
+    public User login(UserLoginRespDTO loginRespDTO, String openId) {
         User user = userMapper.selectOne(User.builder()
                 .wxId(openId)
                 .build());
-        if(user==null)
-        {
+        if (user == null) {
             user = User.builder()
                     .wxId(openId)
                     .avatarUrl(loginRespDTO.getAvatarUrl())

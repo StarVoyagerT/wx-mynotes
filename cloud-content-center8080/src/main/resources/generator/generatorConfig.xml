@@ -4,7 +4,7 @@
 
 <generatorConfiguration>
     <!-- 指定配置文件路径 -->
-    <properties resource="generator/config.properties"/>
+    <properties resource="generator\config.properties"/>
 
     <context id="Mysql" targetRuntime="MyBatis3Simple" defaultModelType="flat">
         <property name="beginningDelimiter" value="`"/>

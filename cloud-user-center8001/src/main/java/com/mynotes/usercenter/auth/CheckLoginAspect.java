@@ -1,5 +1,6 @@
 package com.mynotes.usercenter.auth;
 
+import com.mynotes.usercenter.security.CustomSecurityException;
 import com.mynotes.usercenter.utils.JwtOperator;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +9,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -16,12 +18,13 @@ import javax.servlet.http.HttpServletRequest;
 
 /**
  * @Author: 乔童
- * @Description:检查登录状态注解
- * @Date: 2020/05/10 17:36
+ * @Description: 检查登录状态切面
+ * @Date: 2020/05/11 16:53
  * @Version: 1.0
  */
-@Aspect
 @Component
+@Aspect
+@Order(0)
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class CheckLoginAspect {
 
@@ -31,25 +34,30 @@ public class CheckLoginAspect {
     @Around("@annotation(com.mynotes.usercenter.auth.CheckLogin)")
     public Object checkLogin(ProceedingJoinPoint point)
     {
-        //1.从请求上下文中获取header
-        HttpServletRequest request=null;
-        Claims claim = null;
         try {
+            //1.获取RequestContext中获取当前请求
             ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-            request = requestAttributes.getRequest();
-            String token = request.getHeader("T-Token");
+            HttpServletRequest request = requestAttributes.getRequest();
 
+            //2.从头信息中获取token
+            String token = request.getHeader("X-Token");
+
+            //3.校验token的合法/过期
             Boolean isValida = jwtOperator.validateToken(token);
+
+            //4.如果token不合法/过期，抛出自定义异常
             if(!isValida)
             {
-                throw new SecurityException("Token不合法/已过期！");
+                throw new CustomSecurityException("Token过期/不合法！");
             }
-            claim = jwtOperator.getClaimsFromToken(token);
+            //5.如果合法，根据token获取claim，给当前请求用户添加用户信息
+            Claims claim = jwtOperator.getClaimsFromToken(token);
+            request.setAttribute("id",claim.get("id"));
+            request.setAttribute("wxNickname",claim.get("wxNickname"));
+            request.setAttribute("role",claim.get("role"));
         } catch (Throwable e) {
-            throw new SecurityException("Token不合法/已过期！");
+            throw new CustomSecurityException("Token过期/不合法！");
         }
-        request.setAttribute("id",claim.get("id"));
-        request.setAttribute("wxNickname",claim.get("wxNickname"));
-        request.setAttribute("role",claim.get("role"));
-        return point.proceed();    }
+        return point.proceed();
+    }
 }

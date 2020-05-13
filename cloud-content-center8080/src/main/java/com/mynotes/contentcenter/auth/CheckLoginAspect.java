@@ -1,5 +1,6 @@
 package com.mynotes.contentcenter.auth;
 
+import com.mynotes.contentcenter.security.CustomSecurityException;
 import com.mynotes.contentcenter.utils.JwtOperator;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
@@ -38,16 +39,16 @@ public class CheckLoginAspect {
         try {
             ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             request = requestAttributes.getRequest();
-            String token = request.getHeader("T-Token");
+            String token = request.getHeader("X-Token");
 
             Boolean isValida = jwtOperator.validateToken(token);
             if(!isValida)
             {
-                throw new SecurityException("Token不合法/已过期！");
+                throw new CustomSecurityException("Token不合法/已过期！");
             }
             claim = jwtOperator.getClaimsFromToken(token);
         } catch (Throwable e) {
-            throw new SecurityException("Token不合法/已过期！");
+            throw new CustomSecurityException("Token不合法/已过期！");
         }
         request.setAttribute("id",claim.get("id"));
         request.setAttribute("wxNickname",claim.get("wxNickname"));

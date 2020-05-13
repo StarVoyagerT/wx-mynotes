@@ -7,11 +7,12 @@ import java.lang.annotation.Target;
 
 /**
  * @Author: 乔童
- * @Description: 检查登录状态注解
- * @Date: 2020/05/11 16:51
+ * @Description: 检查授权注解
+ * @Date: 2020/05/11 17:02
  * @Version: 1.0
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface CheckLogin {
+public @interface CheckAuthorize {
+    String value();
 }
