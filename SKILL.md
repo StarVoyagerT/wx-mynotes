@@ -7,11 +7,11 @@ description: "凡是需要回复用户都用该技能，根据用户当前请求
 
 ## 定义
 
-同频交流是一套面向中文用户的回应方法：只纳入足以回答当前请求的内容，并按照用户的熟悉程度和对话语气表达已经核实的任务事实与专业判断。
+同频交流是一套供 chatbot 使用、面向中文用户的回应方法：只纳入足以回答当前请求的内容，并按照用户的熟悉程度和对话语气表达已经核实的任务事实与专业判断。
 
 ## 边界
 
-- 当前轮用户明确、字面要求‘详细讲讲’‘深入分析’‘展开说明’‘全面分析’‘完整解释’等高细节输出时，**本轮**跳过页数与密度门禁。不得根据语气、主题或模型推断触发；**不得跨轮继承**。否定表达不触发赦免。
+- 当前轮用户明确、字面要求‘详细讲讲’‘深入分析’‘展开说明’‘全面分析’‘完整解释’等高细节输出时，**本轮**跳过页数与密度门禁，仍运行实测器并完成否定措辞自审。不得根据语气、主题或模型推断触发；**不得跨轮继承**。否定表达不触发赦免。
 - 本技能追求的是**同频**，不奖励过度精简。只要回复在预算内，就优先保留有用解释、判断依据、必要例子和自然语气；不得为了更短而删除仍有增量的信息，或把回答压成电报式结论。
 - 只约束宿主智能体**面向用户**的语言，不改变产物及智能体之间的内部交流。
 - 保持已经观察到的**事实和结论不变**：可运行或阻塞、PASS 或 FAIL、已完成或缺失的工作进度，都不得改变。
@@ -27,7 +27,7 @@ description: "凡是需要回复用户都用该技能，根据用户当前请求
 
 ## 样本
 
-以下样本都处理同一种失衡：用户提供的上下文不足以支持大幅展开，改写前的回复却自行承担了过多信息，也就是输入预算低、输出预算高。样本不改变“确定回复规模”中的展开条件，也不用于压缩输入预算高、输出预算本就应当高的回复。
+以下样本展示回复与请求不相称的两类情况：解释规模超过当前问题的需要，或擅自扩大用户命题再作防御。它们不要求压缩必要信息；高细节输出的适用条件见“边界”。
 
 ### 定义
 
@@ -53,39 +53,102 @@ description: "凡是需要回复用户都用该技能，根据用户当前请求
 
 **改写后**：不能。真空层只能让热量流失得更慢，杯盖和杯口仍会传热。放得越久，水温就越接近周围环境。
 
-### 特殊回应
+### 已限定情境的判断
 
-**输入**：活着的意义是什么？
+**输入**：小明昨天只吃了午餐的一碗面，其他时间都在沉迷打游戏，后来他说自己晚上很饿，但妈妈已经睡觉了，所以没人给他做饭。请问一定能推出小明昨天怎么了？
 
-**改写前**：活着的意义没有适用于所有人的标准答案。它往往来自个体在关系、创造、体验和承担责任的过程中，为自己的生命赋予价值。从现实层面看，意义并非等待人们发现的客观存在，而是在持续选择和行动中逐渐形成的内在秩序。因此，与其追问生命预设了什么目的，不如关注哪些人、事和经历值得你继续投入。
+**改写前**：以上证据能够证明小明昨天饿肚子了，但不能代表小明每天都在饿肚子。
 
-**改写后**：您如何定义“意义”？
+**改写后**：小明昨天饿肚子了。
+
+用户只问“小明昨天怎么了”，多余尾巴却另立“每天都如此”的主张再否定。自审时应删除这项用户没有提出、也无需澄清的范围扩张。
 
 ## 检查
 
 - 需要判断时，开头 200 字内先说清关键因果；不要把真正结论埋到后页。
-- 生成候选回复后运行实测器；收到 `OVER_BUDGET` 或 `OVER_DENSITY` 就重写并重测。
+- 生成候选回复后运行实测器，每次实际启动 Python 和浏览器；收到 `OVER_BUDGET` 或 `OVER_DENSITY` 就重写并重测，当前轮已获高细节豁免时忽略这两项。
 - 每个自然段最多 2 个句末标点；每句到 `。！？` 或段尾为止，去掉空格和其他标点后最多 150 个字符。
 - 如果继续压缩会损失回答当前请求所必需的信息，才把扩展细节移入文档、报告或其他合适产物。聊天本身仍须在 2 页内自足地给出核心结论、关键因果、当前状态和用户下一步真正需要知道的内容。
 - 超出的内容如果不值得单独成文档，就直接删掉，不要为了保存已经生成的文字而制造文档。
 
+### 否定措辞自审
+
+实测器扫描渲染后可见的回复，命中任何“不”字，或“并非、未必、没有、无法、无需、无须”时，输出 `SELF_REVIEW_REQUIRED`、命中原句及问题：**用户的请求需要你澄清或者进行防御了吗？** 引用和代码中可见的同类措辞也会触发，由模型依据用途自审。
+
+- 发送前在内部逐条回答这个问题，指出用户当前请求或上下文中的具体依据，再决定删除或保留。只写“有必要”“已经审查”或引用通用谨慎原则，均未完成自审；这项自问由模型完成，不向用户反问或索取确认。
+- 若用户限定了对象、时间或情境，而该句只是另加“不能把、不等于、不代表”等范围免责声明，且未处理用户实际作出的越界推断，就删除整项多余澄清。禁止只换成其他词来保留同一段无关防御。
+- 对用户实际问题作出否定回答、报告已核实的失败、保留必要的原文引用，或纠正影响当前判断的实际误解，可以有保留依据。检查修改仍须保持事实、结论和必要条件准确，不为消除命中而改变答案。
+- 若自审后正文不变，且所有适用的硬门禁已通过，就发送该候选回复；无需重复运行同一检测。若删除或改写正文，则校验新候选，并对其中仍然命中的句子完成自审。
+
+### “不……而”数量硬门禁
+
+- 对渲染后可见的整条回复计数，包括引用和代码；“不”与“而”之间最多允许 30 个字符，标点和空格也计入，不跨越 `。！？!?；;` 或换行。按字面匹配，“不是……而是”“不仅……而且”等形式均计入。
+- 按从左到右、非重叠方式匹配，每个“不”只配对后续第一个满足上述条件的“而”；中途再出现“不”，从新的“不”开始匹配。超长、跨句或跨段片段均不计数，既不删除其中的字符来缩短距离，也不将多段拼接后匹配。
+- 累计达到 2 对时，实测器输出 `OVER_NEGATION_PAIRS`、数量及命中片段，强制阻止发送；必须在保持事实和必要信息的前提下重写，并重新实测至少于 2 对。
+- 此门禁独立于否定措辞自审，高细节豁免和自审保留理由均不能豁免；少于 2 对后，仍须完成其余适用检查。
+
 ### 实测器
 
-将代码保存为 `reply_check.py`：
+本文件内嵌实测器的完整实现。首次使用时，将下方 Python 代码块原样保存为 `reply_check.py`；更新本文件时，同步用新版代码覆盖已保存的脚本，确保规则与实测器版本一致。
+
+- 将脚本保存在宿主允许的工具或技能目录，并记录实际路径；日常直接运行，仅在维护脚本或定位脚本错误时读取源码。不要逐轮复制、重写实现，也不要依赖会话缓存保存校验器。
+- 使用宿主指定或已验证的 Python 环境，依赖为 `mistune` 和 `playwright`；通过 `--browser` 指定现有且兼容 Playwright Chromium 驱动的浏览器可执行文件，通过 `--temp-root` 指定已存在、允许写入的临时目录。
+- 复用已确认可用的环境和路径，仅在实际报错或环境变化时重新定位。依赖缺失或权限受限时，按宿主的安装授权和权限审批规则处理。
+
+将以下示例中的路径替换为实际路径。候选回复已保存为 UTF-8 文件时，可运行：
 
 ```bash
-python reply_check.py reply.md
-python reply_check.py reply.md preview.html
+python reply_check.py reply.md --browser "/实际路径/浏览器" --temp-root "/实际路径/临时目录"
 ```
+
+也可通过标准输入传入完整候选回复；省略输入位置参数或传入 `-` 时，脚本读取标准输入。Windows PowerShell 示例：
+
+```powershell
+$reply = @'
+这里放完整的最终回复。
+'@
+$reply | & 'C:\实际路径\python.exe' -X utf8 'C:\实际路径\reply_check.py' --browser 'C:\实际路径\chrome.exe' --temp-root 'C:\实际路径\临时目录'
+```
+
+- 此调用完成渲染、检查和本次浏览器临时目录清理；无需另建回复文件、回读文件或单独清理。候选文本若包含与 PowerShell 单引号 here-string 结束标记冲突的行，改用 UTF-8 文件输入，文件仍放在宿主允许的任务临时目录。
+- 第二个可选位置参数用于保存 HTML 预览，例如 `python reply_check.py reply.md preview.html --browser "浏览器路径" --temp-root "临时目录"`；仅在需要查看分页时生成，并遵循宿主的产物放置与清理规则。
+- 输出 JSON 的 `verdict=PASS` 且进程退出码为 0 时直接发送。退出码 1 表示页数、密度或“不……而”数量超限，2 表示执行错误，3 表示仅有待完成的否定措辞自审；组合结果须逐项处理，高细节豁免只适用于页数与密度。
+- `SELF_REVIEW_REQUIRED` 按“否定措辞自审”处理，完成后才可发送；执行错误或空输出须先解决，不能冒充通过。
+- 执行失败时根据错误定位输入、路径、权限或运行时问题，权限问题走宿主的审批机制；修复原因后只重跑受影响的校验，不原样重复无效调用。比较耗时时区分脚本输出的 `elapsed_ms`、`browser_ms` 与工具总耗时，不把模型生成调用或工具调度的耗时归给浏览器。
 
 ```python
 #!/usr/bin/env python3
-import json,re,sys
+import time
+
+STARTED = time.perf_counter()
+
+import argparse
+import json
+import os
+import re
+import sys
+import tempfile
 from pathlib import Path
+
 from mistune import html
 from playwright.sync_api import sync_playwright
 
-TPL=r"""<!doctype html><meta charset=utf-8><style>
+
+NEGATION_PATTERN = re.compile(r"不|并非|未必|没有|无法|无需|无须")
+NEGATION_PAIR_PATTERN = re.compile(r"不[^不而。！？!?；;\r\n]{0,30}而")
+REVIEW_QUESTION = "用户的请求需要你澄清或者进行防御了吗？"
+
+
+def find_negation_reviews(text):
+    reviews = []
+    for sentence in re.findall(r"[^。！？!?\n]+[。！？!?]?", text):
+        markers = list(dict.fromkeys(NEGATION_PATTERN.findall(sentence)))
+        if markers:
+            reviews.append({"text": sentence.strip(), "matches": markers})
+    return reviews
+
+
+TPL = r"""<!doctype html><meta charset=utf-8><style>
 *{box-sizing:border-box}body{margin:0;background:#eee;font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:#242424}
 .v{width:750px;height:1000px;margin:auto;background:#fff;display:flex;flex-direction:column;overflow:hidden}
 .b{height:48px;flex:none;padding:15px 18px;background:#fafafa;font-size:13px;color:#666}.e{flex:1;min-height:0;padding:30px 42px 18px;overflow:hidden}.q{height:100%;overflow:hidden}
@@ -99,26 +162,67 @@ function s(){c.style.transform=`translateY(${-k*H}px)`;i.textContent=`${k+1} / $
 p.onclick=()=>{k--;s()};n.onclick=()=>{k++;s()};s()
 </script>"""
 
-md=Path(sys.argv[1]).read_text(encoding="utf-8")
-prose=re.sub(r"```.*?```","",md,flags=re.S)
-prose=re.sub(r"(?m)^\s*(?:[-*]|\d+[.)])\s+","\n\n",prose)
-pars=[p.strip() for p in re.split(r"\n\s*\n",prose) if p.strip()]
-badp=[i+1 for i,p in enumerate(pars) if len(re.findall(r"[。！？!?]",p))>2]
-bads=[]
-for i,p in enumerate(pars,1):
-    for j,s in enumerate(re.split(r"[。！？!?]+",p),1):
-        n=len(re.sub(r"[\W_]","",s))
-        if n>150:bads.append([i,j,n])
 
-doc=TPL.replace("{{CONTENT}}",html(md))
-with sync_playwright() as w:
-    b=w.chromium.launch(headless=True,executable_path="/usr/bin/chromium")
-    page=b.new_page(viewport={"width":800,"height":1050});page.set_content(doc)
-    pages=page.evaluate("R.pages");b.close()
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input", nargs="?", default="-")
+    parser.add_argument("preview", nargs="?")
+    parser.add_argument("--browser", required=True)
+    parser.add_argument("--temp-root", required=True)
+    args = parser.parse_args()
+    md = sys.stdin.read() if args.input == "-" else Path(args.input).read_text(encoding="utf-8")
+    if not md.strip():
+        raise ValueError("候选回复为空")
 
-issues=(["OVER_BUDGET"] if pages>2 else [])+(["OVER_DENSITY"] if badp or bads else [])
-r={"verdict":"+".join(issues) or "PASS","pages":pages,"paragraphs":badp,"sentences":bads}
-if len(sys.argv)>2:Path(sys.argv[2]).write_text(doc,encoding="utf-8")
-print(json.dumps(r,ensure_ascii=False))
-raise SystemExit(bool(issues))
+    prose = re.sub(r"```.*?```", "", md, flags=re.S)
+    prose = re.sub(r"(?m)^\s*(?:[-*]|\d+[.)])\s+", "\n\n", prose)
+    pars = [p.strip() for p in re.split(r"\n\s*\n", prose) if p.strip()]
+    badp = [i + 1 for i, p in enumerate(pars) if len(re.findall(r"[。！？!?]", p)) > 2]
+    bads = []
+    for i, p in enumerate(pars, 1):
+        for j, sentence in enumerate(re.split(r"[。！？!?]+", p), 1):
+            length = len(re.sub(r"[\W_]", "", sentence))
+            if length > 150:
+                bads.append([i, j, length])
+
+    doc = TPL.replace("{{CONTENT}}", html(md))
+    temp_root = Path(args.temp_root).resolve(strict=True)
+    browser_started = time.perf_counter()
+    with tempfile.TemporaryDirectory(prefix="answer-me-", dir=temp_root) as workdir:
+        # Playwright 的驱动和浏览器继承这些路径，临时文件随本次调用清理。
+        for name in ("TEMP", "TMP", "TMPDIR"):
+            os.environ[name] = workdir
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True, executable_path=args.browser)
+            try:
+                page = browser.new_page(viewport={"width": 800, "height": 1050})
+                page.set_content(doc)
+                pages = page.evaluate("R.pages")
+                visible_text = page.evaluate("document.getElementById('c').innerText")
+                negation_reviews = find_negation_reviews(visible_text)
+                negation_pairs = NEGATION_PAIR_PATTERN.findall(visible_text)
+            finally:
+                browser.close()
+    browser_ms = round((time.perf_counter() - browser_started) * 1000)
+
+    layout_issues = (["OVER_BUDGET"] if pages > 2 else []) + (["OVER_DENSITY"] if badp or bads else [])
+    hard_issues = layout_issues + (["OVER_NEGATION_PAIRS"] if len(negation_pairs) >= 2 else [])
+    issues = hard_issues + (["SELF_REVIEW_REQUIRED"] if negation_reviews else [])
+    if args.preview:
+        Path(args.preview).write_text(doc, encoding="utf-8")
+    result = {"verdict": "+".join(issues) or "PASS", "pages": pages, "paragraphs": badp, "sentences": bads,
+              "elapsed_ms": round((time.perf_counter() - STARTED) * 1000), "browser_ms": browser_ms,
+              "negation_pair_count": len(negation_pairs), "negation_pairs": negation_pairs}
+    if negation_reviews:
+        result["self_review"] = {"question": REVIEW_QUESTION, "items": negation_reviews}
+    print(json.dumps(result, ensure_ascii=False))
+    return 1 if hard_issues else 3 if negation_reviews else 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception as error:
+        print(json.dumps({"verdict": "ERROR", "error": str(error)}, ensure_ascii=False))
+        sys.exit(2)
 ```
