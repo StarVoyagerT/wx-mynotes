@@ -1,474 +1,179 @@
 ---
-name: answer-me
-description: "凡是 chatbot 需要回复用户都用该技能，根据当前请求组织通俗自然的中文回复，并在发送前实际运行内嵌 Python 实测器检查完整候选；仅读取规则不算使用。本技能触发时禁止声明。"
+name: speak-properly-lite
+description: "用于 chatbot 中文回复的表达取舍与修订。起草时使用内嵌方法，发送前实际运行内嵌 Python 检查完整候选；不……而达到两对强制阻拦。静默使用。"
 ---
 
 ```python
 #!/usr/bin/env python3
-# # 同频交流
+# 好好说话 · Chatbot Lite
+#
+# 适用：chatbot 生成或改写中文回复，包括解释、建议、讨论和交付说明。
+# 输入：当前用户请求、与请求有关的已有对话和待发送的完整回复。
+# 本文件包含全部表达方法及检查代码，不需要其他技能文件。静默使用。
+# 事实依据仍须来自任务资料；本技能检查表达，代码不能判断事实是否可靠。
+#
+# 写作方法
+# 从用户明确提出的问题起笔，把回答、理由与必要条件接起来。对话中没有给出的
+# 动机只能作为待确认的猜测，不能把自己的推测宣布为用户的真正需求。
+# 篇幅由理解所需的信息决定：保留关键关系、事实和例子，删掉没有作用的铺垫。
+# 用户要详细推导时展开推导；简单问题直接回答，不能用简短为理由删掉关键条件。
+#
+# 解释时指出具体对象、发生的变化和条件。用术语能更准确地交流时保留术语；
+# 如果术语只是把一个容易理解的过程藏起来，就把过程写出来。
+# 案例：用户问冰箱为什么停一会儿又启动。
+# 坏稿：这是设备通过闭环调节机制平衡热环境与运行负荷的表现。
+# 好稿：箱内温度降到设定下限，压缩机就停；升到上限，它再启动。停机后，
+#       外界热量仍会通过箱壁和门封进入，开门也会带进暖空气，所以温度会回升。
+# 理由：温度变化、启停条件和热量来源解释了现象；抽象名词本身没有解释这些关系。
+#
+# 判断一句补充是否保留：它会改变当前答案的含义、用户的选择或接下来的行动吗？
+# 相关条件写在相应结论旁。只因理论上可能存在而加入的旁支，通常可以删除。
+# 案例：日志显示导出任务在排队，实际执行速度正常，用户问为什么导出慢。
+# 坏稿：可能是队列、磁盘、网络或文件损坏，需要全面排查。
+# 好稿：时间主要花在排队上；任务开始执行后的速度正常。先处理队列积压。
+#       如果排队消失后仍然慢，再检查执行过程。
+# 理由：按已有证据安排判断；后续排查有明确触发条件，不把所有可能性摆成同等嫌疑。
+#
+# 对比、否定和边界应直接回答问题、表达影响判断的差异或条件，或纠正有依据的误解。
+# 都没有作用时直接说结论。保留有用关系，不能只换同义词来消掉命中。
+# 案例：用户问一次阴性结果能否彻底排除感染。
+# 可保留：一次阴性结果不能彻底排除感染，检测时机也会影响结果。
+# 理由：用户问的就是排除能力，限制直接回答问题。不能因出现否定就删掉必要条件。
+# 案例：用户只问备份放在哪里。
+# 坏稿：这不是迁移，而是备份；它不代表原文件被删除。
+# 好稿：备份在你指定的备份目录里。
+# 理由：这段对比没有回答额外问题；若用户确实追问原文件是否还在，再据实回答。
+# 示例中的位置、日志和检测条件仅在各自假设中成立，实际回复必须使用当前任务资料。
+#
+# 建议应写清动作如何解决当前问题。不能把“优化机制、重塑流程、加强闭环”
+# 当作解决办法；需要指出哪个环节发生了什么、准备改变什么，以及为什么有用。
+# 案例：用户问怎样避免重复提交表单。
+# 坏稿：需要从提交链路入手，完善防重机制。
+# 好稿：发送请求后先禁用提交按钮，收到结果再恢复，避免等待期间反复点击。
+#       如果请求可能被重试，还要由服务端识别同一次提交，避免重复写入。
+# 理由：动作与重复发生的条件一一对应；第二项只在请求重试也需要防重时展开。
+#
+# 汇报交付时说明结果、与用户目标有关的变化及影响使用的未完成事项。
+# 路径、错误和必须逐字保留的引用保持准确。链接应有足以辨认内容的名称。
+# 不主动堆砌“我检查过、没有碰其他文件”等自证；用户质疑某项操作时据实回应那项。
+# 案例：用户让整理会议记录。
+# 坏稿：我已完成整理，检查了格式，没有删除合同，也没有修改其他文件。
+# 好稿：会议记录已按议题整理，待办列在文末。负责人未明确的事项已标出。
+# 理由：结果和待办状态影响使用；无关操作清单占用注意力。实际没有待办时不要照抄。
+#
+# 运行约定
+# 使用沙箱已有 Python 3.9+ 和 mistune 3.x，将本代码块保存为 reply_check.py。
+# 成稿后必须实际执行：python3 reply_check.py reply.md，reply.md 为完整候选（UTF-8）。
+# blocked 必须改写，error 须修复后重跑；review 提示结合当前请求判断，可保留必要表达。
+# 按上述写作方法复核全文，clear 也不例外；正文改动后重测，通过后发送受检原文。
+# 改写须保留事实及必要原文，处理表达问题本身，禁止只改格式规避门禁。
+# 引用冲突或执行受阻无法解决时，只报告阻碍；不自行安装软件。
 #
-# ## 定义
-#
-# 同频交流是一套供 chatbot 使用、面向中文用户的回应方法：只纳入足以回答当前请求的内容，并按照用户的熟悉程度和对话语气表达已经核实的任务事实与专业判断。
-#
-# ## 边界
-#
-# - 当前轮用户明确、字面要求‘详细讲讲’‘深入分析’‘展开说明’‘全面分析’‘完整解释’等高细节输出时，**本轮**跳过页数与密度门禁，仍运行实测器并完成否定措辞自审。不得根据语气、主题或模型推断触发；**不得跨轮继承**。否定表达不触发赦免。
-# - 本技能追求的是**同频**，不奖励过度精简。只要回复在预算内，就优先保留有用解释、判断依据、必要例子和自然语气；不得为了更短而删除仍有增量的信息，或把回答压成电报式结论。
-# - 只约束宿主智能体**面向用户**的语言，不改变智能体之间的内部交流。
-# - 保持已经观察到的**事实和结论不变**：可运行或阻塞、PASS 或 FAIL、已完成或缺失的工作进度，都不得改变。
-# - 可以补充解释、重新组织信息并加入有**证据支持的判断**；不得为了简化回复而编造证据或改写事实。
-# - **静默使用**，禁止声明正在使用本技能。
-#
-# ## 通俗表达
-#
-# - 根据对话估计用户对该领域的熟悉程度。熟悉的术语无需解释；无法确定时优先使用直白措辞，不要扩写成基础教程。
-# - 命令、路径、错误、日志或测试结果一旦被选入回复，就保留其原始内容，只改写周围的说明文字。
-# - 在选定的回复规模内积极给出有用的专业意见。事实与意见混淆会影响用户判断时，说明意见的依据。
-# - 只有当抽象词说明了它归纳的具体事实以及保留的关键区别时，才允许它承担解释。否则，改为陈述它所掩盖的事实、关系或原因。
-# - 需要判断时，开头 200 字内先说清关键因果。篇幅受限时，聊天仍须自足地交代核心结论、关键因果、当前状态和用户需要的下一步；压缩会损失必要信息时，将有独立交付价值的细节另存文档，其余冗余内容删除。
-#
-# ## 样本
-#
-# 以下样本展示回复与请求不相称的几类情况：解释规模超过当前问题的需要，用术语遮住用户需要理解的过程或变化，或擅自扩大用户命题再作防御。它们不要求压缩必要信息；高细节输出的适用条件见“边界”。
-#
-# ### 定义
-#
-# **输入**：Python 中的类是什么？
-#
-# **Bad**：类提供了把数据和功能绑定在一起的方法。创建新类时创建了新的对象类型，从而能够创建该类型的新实例。实例具有能维持自身状态的属性，还具有能修改自身状态的方法（由其所属的类来定义）。
-#
-# **Good**：类是一种对象模板。它规定按这一模板创建出来的对象应具备哪些属性，以及可调用哪些方法。
-#
-#
-#
-# **输入**：机会成本是什么？
-#
-# **Bad**：机会成本是经济学中的一个基本概念，指选择某一方案时，所放弃的最佳替代方案能够带来的价值。它可以表现为金钱、时间、体验或其他收益。例如，周末选择加班而放弃看演出，观看演出所能带来的体验就是这一选择的机会成本。
-#
-# **Good**：假设周末只能选加班或看演出，选了加班，错过演出带来的体验就是机会成本。这个概念关心的是：同一份时间或资源，拿去做另一件值得的事，本来能得到什么。
-#
-# ### 机制
-#
-# **输入**：冰箱为什么会自己停机，过一会儿又启动？
-#
-# **Bad**：冰箱压缩机的间歇性运行，源于设备对内部热环境实施的闭环调节机制。温度传感单元持续采集箱内状态，控制模块将监测结果与预设阈值进行比较，并据此切换制冷执行部件的工作状态。该过程通过周期性启停压缩机，在维持目标温度区间的同时，兼顾能源消耗与设备运行负荷。
-#
-# **Good**：冰箱是看温度来决定什么时候制冷的：降到设定的下限，压缩机就停；升到上限，它再启动。
-# 压缩机停下来以后，外面的热量会通过箱壁和门封传进去，导致里面慢慢变暖；开门拿东西时，暖空气也会进去。等温度升到上限，压缩机才开始制冷，这样冰箱里的温度就能保持在设定范围内。
-#
-# > 坏回答把“什么东西在什么条件下做什么”藏进了专业名词里，读者得自己翻译。好回答直接写出温度变化、压缩机启停以及它们之间的关系，让读者能够顺着过程理解。迁移到其他解释任务时，检查读者是否还得自己把术语还原成实际过程。
-#
-#
-#
-# **输入**：自行车停踩后为什么还能往前走？
-#
-# **Bad**：自行车停止踩踏后仍然能够向前运动，主要是由于惯性的作用。根据牛顿第一定律，物体在合外力为零时会保持静止或匀速直线运动状态，而停止踩踏只是停止提供驱动力，自行车仍然具有向前的速度。在实际骑行中，滚动阻力、机械摩擦和空气阻力会使车速逐渐降低，直至停止。
-#
-# **Good**：牛顿第一定律说，物体受到的合力为零时，会保持静止或匀速直线运动；所以你停下踩踏，车原有的速度还在，会继续往前滑。实际骑车时，摩擦和空气阻力一直在拖慢它，最后它才会停下来。
-#
-# ### 边界
-#
-# **输入**：保温杯能一直保温吗？
-#
-# **Bad**：保温杯所提供的温度保持能力具有明确的时间与环境边界。真空夹层能够降低热传导和对流造成的能量交换，但杯盖、密封结构及杯体材料仍会形成热量传递路径。在内外温差持续存在的情况下，杯中液体最终仍将趋向环境温度。因此，所谓“保温”应理解为延缓温度变化，而非维持恒定温度。
-#
-# **Good**：不能，按热力学第二定律，热量会自发地从温度高的地方传向温度低的地方，所以热水会向较冷的周围环境散热。保温杯靠真空夹层等结构减慢这个过程，但仍有热量通过杯盖、杯口等地方散出去，放久了水就会凉。
-#
-#
-#
-# **输入**：平均分高，能说明每个人的分数都高吗？
-#
-# **Bad**：平均分反映的是一组数据的整体水平，不能直接说明每个个体的具体情况，因为较高的分数可能拉高平均值。例如，60、60、100分的平均分约为73.3分，但其中两人的分数均低于这一水平。还可以结合中位数观察数据的分布：将这三个分数排序后，位于中间的数值为60分。
-#
-# **Good**：光看平均分，看不出每个人考得怎样。比如60、60、100分，平均约73分，但这组成绩的中位数只有60分。
-#
-# ### 请求
-#
-# **情境**：用户希望让明日方舟在 SakuraCat 开着时走直连。代理已准备好新设置，正在请求用户批准应用。
-#
-# **Bad**：是否批准通过本机接口热加载这份候选配置？
-#
-# **Good**：我准备让正在运行的 SakuraCat 读取新设置，让明日方舟走直连。现在应用吗？
-#
-# > 用户要决定是否同意，坏回答却让用户先理解实现方式。解释机制时，让用户理解过程；请求批准时，让用户理解要做什么、会产生什么变化。技术细节的取舍取决于当前问题：如果用户正在排查接口调用失败，“本机接口”和具体命令就可能是必要信息。
-#
-# ### 报告
-#
-# **情境**：代理完成本地 Skill 安装后，检查项目文档，发现两处原有文字被检查器标记。用户需要知道具体问题及其处理情况。
-#
-# **Bad**：项目全文文字检查仍有第 16、22 行两处旧命中，本次保留。
-#
-# **Good**：项目根目录的 AGENTS.md 有两处原有文字被检查器标记：
-#
-# - 第 16 行说明修饰语的判断标准时，多加了一层否定和转折，末句可以直接写成“判断标准是这段修饰是否改变了读者对事实、条件、因果或程度的理解”。
-# - 第 22 行在说明哪些纠偏句式可以使用，检查器也标记了其中引用的句式示例。
-#
-# 这两处超出本次安装任务的修改范围，暂时保留。
-#
-# > 坏回答省掉了文件、具体问题和处理理由，用户只能追问或自己翻找记录。将“旧命中”换成“原有文字被标记”，仍然缺少这些信息。写提醒时，检查用户是否能从对话和回复中知道这件事指什么、影响什么、如何处理；凡是理解所必需、却只存在于工具日志或代理执行经历中的信息，应补进回复。具体补哪些信息取决于这项提醒要帮助用户作什么判断。
-#
-# ### 防御性
-#
-# **输入**：小明昨天只吃了午餐的一碗面，其他时间都在沉迷打游戏，后来他说自己晚上很饿，但妈妈已经睡觉了，所以没人给他做饭。请问一定能推出小明昨天怎么了？
-#
-# **Bad**：以上证据能够证明小明昨天饿肚子了，但不能代表小明每天都在饿肚子。
-#
-# **Good**：小明昨天饿肚子了。
-#
-# > 只问“小明昨天怎么了”，多余尾巴却另立“每天都如此”的主张再否定。自审时应删除这项用户没有提出、也无需澄清的范围扩张。
-#
-#
-#
-# **输入**：数据库索引是干什么的？用个比喻讲讲。
-#
-# **Bad**：如果只是帮助建立直观印象，用书的目录来类比数据库索引是比较合适的，理解到它能辅助定位数据就可以，二者在具体实现上仍有差异。
-#
-# **Good**：数据库索引像书的目录：先查到要找的内容在哪里，再直接翻过去，能省去从头到尾查找的工夫。
-#
-# > 这里要改掉的是“先限定理解层次，再评价这种理解够不够”整套说法；把实际作用、过程或例子重新放到句子的中心。
-#
-#
-# ## 检查
-#
-# 将整个 Python 代码块保存为 reply_check.py，版本更新时同步覆盖；使用沙箱已有 Python，依赖为 mistune。
-# 每轮发送前，必须实际运行磁盘上的脚本，检查准备发送的完整候选回复，并取得本次工具返回的结果；仅读取规则或复用往轮结果不算完成。
-#
-#     python3 reply_check.py < reply.md
-#
-# reply.md 使用 UTF-8 编码。按返回的 actions 和 self_review 处理，正文改动后重跑；PASS 或自审完成且适用门禁通过后发送。
-# 高细节豁免只适用于页数与密度，“不……而”配对门禁始终生效。运行报错或空输出时先排障再检查；维护或排错时才读取实现。
-
-import time
-
-STARTED = time.perf_counter()
-
 import argparse
 import json
 import re
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
 
-from mistune import html
-import math
-import re
-import unicodedata
-from dataclasses import dataclass, field
-from html.parser import HTMLParser
 
+class VisibleText(HTMLParser):
+    BLOCKS = {"p", "div", "li", "blockquote", "pre", "tr", "h1", "h2", "h3", "h4", "h5", "h6"}
 
-CONTENT_WIDTH = 750 - 42 * 2
-PAGE_HEIGHT = 1000 - 48 * 2 - 30 - 18
-FONT_SIZE = 16
-LINE_HEIGHT = 1.72
-ASCII_WIDTHS_AT_16PX = (
-    4.391, 4.547, 6.281, 9.453, 8.625, 13.094, 12.813, 3.688, 4.828, 4.828,
-    6.672, 10.953, 3.469, 6.406, 3.469, 6.234, 8.625, 8.625, 8.625, 8.625,
-    8.625, 8.625, 8.625, 8.625, 8.625, 8.625, 3.469, 3.469, 10.953, 10.953,
-    10.953, 7.172, 15.281, 10.328, 9.172, 9.906, 11.219, 8.094, 7.813, 10.984,
-    11.359, 4.266, 5.719, 9.281, 7.531, 14.375, 11.969, 12.063, 8.969, 12.063,
-    9.578, 8.5, 8.391, 11, 9.938, 14.953, 9.438, 8.844, 9.125, 4.828,
-    6.063, 4.828, 10.953, 6.641, 4.297, 8.141, 9.406, 7.391, 9.422, 8.375,
-    5.016, 9.422, 9.063, 3.875, 3.875, 7.953, 3.875, 13.781, 9.063, 9.375,
-    9.406, 9.422, 5.563, 6.797, 5.422, 9.063, 7.672, 11.563, 7.344, 7.75,
-    7.234, 4.828, 3.828, 4.828, 10.953,
-)
-BLOCKS = {"p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li",
-          "blockquote", "pre", "table", "thead", "tbody", "tr", "div", "hr"}
-VOID = {"br", "hr", "img", "input", "meta", "link", "wbr"}
-
-
-@dataclass
-class Node:
-    tag: str
-    attrs: dict = field(default_factory=dict)
-    children: list = field(default_factory=list)
-
-
-class Document(HTMLParser):
-    def __init__(self, source):
+    def __init__(self):
         super().__init__(convert_charrefs=True)
-        self.root = Node("root")
-        self.stack = [self.root]
-        self.feed(source)
+        self.visible = []
+        self.prose = []
+        self.protected = 0
+
+    def boundary(self):
+        self.visible.append("\n")
+        self.prose.append("\n")
 
     def handle_starttag(self, tag, attrs):
-        node = Node(tag, dict(attrs))
-        self.stack[-1].children.append(node)
-        if tag not in VOID:
-            self.stack.append(node)
-
-    def handle_startendtag(self, tag, attrs):
-        self.handle_starttag(tag, attrs)
-        if tag not in VOID:
-            self.handle_endtag(tag)
+        if tag in self.BLOCKS or tag == "br":
+            self.boundary()
+        if tag in {"code", "pre", "blockquote"}:
+            self.protected += 1
+            self.prose.append("\n")
+        if tag == "img":
+            self.handle_data(dict(attrs).get("alt", ""))
 
     def handle_endtag(self, tag):
-        for i in range(len(self.stack) - 1, 0, -1):
-            if self.stack[i].tag == tag:
-                del self.stack[i:]
-                break
+        if tag in {"code", "pre", "blockquote"}:
+            self.protected = max(0, self.protected - 1)
+            self.prose.append("\n")
+        if tag in self.BLOCKS:
+            self.boundary()
+        elif tag in {"td", "th"}:
+            self.boundary()
 
     def handle_data(self, data):
-        self.stack[-1].children.append(data)
+        self.visible.append(data)
+        if not self.protected:
+            self.prose.append(data)
 
 
-def visible_text(node):
-    if isinstance(node, str):
-        return node
-    if node.tag in {"script", "style"}:
-        return ""
-    if node.tag == "br":
-        return "\n"
-    text = "".join(visible_text(child) for child in node.children)
-    if node.tag in {"td", "th"}:
-        return text + "\t"
-    return text + ("\n" if node.tag in BLOCKS else "")
+PAIR = re.compile(r"不[^不而。！？!?；;\r\n]{0,30}而")
+BANNED = ("你说得对", "过头了", "质疑地对", "还不能")
+# 软提示只定位值得复核的文字；代码和块引用不参与，以免要求改写程序或引文。
+RULES = (
+    ("intent", r"你(?:真正|实际)(?:想要|需要|关心|的问题)|你的(?:真正|实际)需求",
+     "是否把推测的动机当成用户已表达的需求？依据不足就回到原问题。"),
+    ("contrast", r"不代表|不等于|不能据此|仅限于|不是|并非|而是",
+     "对比或限制是否回答实际问题、影响结论？保留必要条件，删除无用纠偏。"),
+    ("abstract", r"(?:优化|完善|重塑|加强|建立).{0,10}(?:机制|流程|闭环)|(?:底层逻辑|本质上)",
+     "是否只给抽象名称？补出当前对象的变化、条件或具体动作。"),
+    ("self_proof", r"(?:我已|已经|逐项|全部).{0,8}(?:检查|验证|核对)|没有(?:修改|删除|触碰)",
+     "用户是否在问这项操作？汇报保留影响使用的结果和未完成事项。"),
+)
 
 
-def char_width(char, size, mono=False):
-    if unicodedata.combining(char) or unicodedata.category(char) in {"Cf", "Cc"}:
-        return 0
-    if unicodedata.east_asian_width(char) in {"W", "F"}:
-        return size
-    if mono:
-        return size * 0.6
-    if 32 <= ord(char) <= 126:
-        return ASCII_WIDTHS_AT_16PX[ord(char) - 32] * size / 16
-    return size * (0.63 if char.isupper() else 0.52)
+def check(markdown):
+    import mistune
 
-
-def inline_tokens(node, size=FONT_SIZE, mono=False, bold=False):
-    if isinstance(node, str):
-        for part in re.findall(r"[A-Za-z0-9_]+|\s+|.", node):
-            text = " " if part.isspace() else part
-            yield text, sum(char_width(c, size, mono) for c in text) * (1.04 if bold else 1)
-        return
-    if node.tag in {"script", "style"}:
-        return
-    if node.tag == "br":
-        yield "\n", 0
-    for child in node.children:
-        yield from inline_tokens(child, size, mono or node.tag == "code",
-                                 bold or node.tag in {"strong", "b", "th"})
-
-
-def inline_height(node, width, size=FONT_SIZE):
-    lines, used, previous_space = 1, 0.0, False
-    for text, length in inline_tokens(node, size):
-        if text == "\n":
-            lines, used, previous_space = lines + 1, 0, False
-        elif text == " ":
-            if used and not previous_space:
-                used += length
-            previous_space = True
-        else:
-            previous_space = False
-            if used and used + length > width:
-                lines, used = lines + 1, 0
-            while length > width:
-                lines, length = lines + 1, length - width
-            used += length
-    def images(parent):
-        if isinstance(parent, str):
-            return 0
-        if parent.tag == "img":
-            value = parent.attrs.get("height", "") or ""
-            return float(value) if re.fullmatch(r"\d+(?:\.\d+)?", value) else 180
-        return sum(images(child) for child in parent.children)
-
-    return lines * size * LINE_HEIGHT + images(node)
-
-
-def block_box(node, width):
-    tag = node.tag
-    if tag in {"script", "style"}:
-        return 0, 0, 0
-    if tag == "pre":
-        lines = max(1, len(visible_text(node).rstrip("\n").split("\n")))
-        return lines * FONT_SIZE * LINE_HEIGHT + 30, 16, 16
-    if tag in {"h1", "h2", "h3", "h4", "h5", "h6"}:
-        scale = {"h1": 2, "h2": 1.5, "h3": 1.17, "h4": 1, "h5": 0.83, "h6": 0.67}[tag]
-        return inline_height(node, width, FONT_SIZE * scale), 26, 12
-    if tag == "p":
-        return inline_height(node, width), 0, 16
-    if tag in {"ul", "ol"}:
-        return flow(node.children, max(1, width - 40), include_edges=True), 16, 16
-    if tag == "blockquote":
-        return flow(node.children, max(1, width - 80)), 16, 16
-    if tag == "hr":
-        return 2, 8, 8
-    if tag == "table":
-        rows = []
-
-        def collect(parent):
-            for child in parent.children:
-                if isinstance(child, Node):
-                    if child.tag == "tr":
-                        rows.append([c for c in child.children if isinstance(c, Node)
-                                     and c.tag in {"td", "th"}])
-                    else:
-                        collect(child)
-
-        collect(node)
-        columns = max((len(row) for row in rows), default=1)
-        preferred = [1.0] * columns
-        for row in rows:
-            for i, cell in enumerate(row):
-                preferred[i] = max(preferred[i], sum(n for _, n in inline_tokens(cell)))
-        available = max(columns, width - 2 * (columns + 1) - 2 * columns)
-        widths = preferred[:]
-        if sum(widths) > available:
-            minimum = [min(p, FONT_SIZE * 2, available / columns) for p in preferred]
-            remaining = available - sum(minimum)
-            weights = [p - m for p, m in zip(preferred, minimum)]
-            widths = [m + remaining * w / sum(weights) for m, w in zip(minimum, weights)]
-        height = sum(max((inline_height(cell, widths[i]) for i, cell in enumerate(row)),
-                         default=0) + 2 for row in rows) + 2 * (len(rows) + 1)
-        return height, 0, 0
-    return flow(node.children, width, include_edges=True), 0, 0
-
-
-def flow(children, width, include_edges=False):
-    boxes, inline = [], []
-
-    def flush():
-        if inline and visible_text(Node("span", children=inline)).strip():
-            boxes.append((inline_height(Node("span", children=inline), width), 0, 0))
-        inline.clear()
-
-    for child in children:
-        if isinstance(child, Node) and child.tag in BLOCKS:
-            flush()
-            boxes.append(block_box(child, width))
-        else:
-            inline.append(child)
-    flush()
-    height, previous = 0.0, 0
-    for i, (body, top, bottom) in enumerate(boxes):
-        height += body + (max(previous, top) if i else top if include_edges else 0)
-        previous = bottom
-    return height + (previous if include_edges else 0)
-
-
-# 固定模板估算在分页临界点可能与 HTML 预览相差一页；字体及自定义样式会影响精度。
-def estimate(fragment):
-    document = Document(fragment)
-    height = flow(document.root.children, CONTENT_WIDTH)
-    return {"pages": max(1, math.ceil(height / PAGE_HEIGHT)),
-            "height_px": round(height, 1), "page_height_px": PAGE_HEIGHT,
-            "text": visible_text(document.root)}
-
-
-NEGATION_PATTERN = re.compile(r"不|并非|未必|没有|无法|无需|无须")
-NEGATION_PAIR_PATTERN = re.compile(r"不[^不而。！？!?；;\r\n]{0,30}而")
-REVIEW_QUESTION = "用户的请求需要你澄清或者进行防御了吗？"
-MAX_PAGES = 2
-MAX_PARAGRAPH_SENTENCES = 2
-MAX_SENTENCE_CHARS = 150
-REVIEW_INSTRUCTIONS = [
-    "在内部逐项指出当前用户请求或上下文中的具体依据，决定删除或保留；不要向用户反问或索取确认。",
-    "用户已限定对象、时间或情境时，删除只重复这些限定、未处理实际误解的多余说明；不要只换词保留同一项无关防御。",
-    "回答用户实际问题、报告已核实的失败、保留必要原文或纠正实际误解所需的否定表达可以保留；改写须保留事实、结论和必要条件。",
-    "自审后正文有改动就重新检查；正文未改时，先确认配对数量门禁通过，再确认篇幅和密度通过或本轮已获高细节豁免；这些条件满足后直接发送，无需重复检测。",
-]
-
-
-def find_negation_reviews(text):
-    reviews = []
-    for sentence in re.findall(r"[^。！？!?\n]+[。！？!?]?", text):
-        markers = list(dict.fromkeys(NEGATION_PATTERN.findall(sentence)))
-        if markers:
-            reviews.append({"text": sentence.strip(), "matches": markers})
-    return reviews
-
-
-TPL = r"""<!doctype html><meta charset=utf-8><style>
-*{box-sizing:border-box}body{margin:0;background:#eee;font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:#242424}
-.v{width:750px;height:1000px;margin:auto;background:#fff;display:flex;flex-direction:column;overflow:hidden}
-.b{height:48px;flex:none;padding:15px 18px;background:#fafafa;font-size:13px;color:#666}.e{flex:1;min-height:0;padding:30px 42px 18px;overflow:hidden}.q{height:100%;overflow:hidden}
-.c{font-size:16px;line-height:1.72;overflow-wrap:anywhere}.c p{margin:0 0 16px}.c h1,.c h2,.c h3{margin:26px 0 12px}.c code{font-family:monospace;background:#f3f3f3}.c pre{padding:15px 17px;background:#f6f6f6;overflow:auto}
-.nav{height:48px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:#fafafa}button{padding:7px 12px}
-</style><div class=v><div class=b>reply.md</div><main class=e><div id=q class=q><article id=c class=c>{{CONTENT}}</article></div></main>
-<div class=nav><button id=p>上一页</button><span id=i></span><button id=n>下一页</button></div></div>
-<script>
-let k=0,H=q.clientHeight,N=Math.ceil(c.scrollHeight/H);window.R={pages:N};
-function s(){c.style.transform=`translateY(${-k*H}px)`;i.textContent=`${k+1} / ${N}`;p.disabled=!k;n.disabled=k==N-1}
-p.onclick=()=>{k--;s()};n.onclick=()=>{k++;s()};s()
-</script>"""
+    # 禁用原始 HTML，避免把候选内容解释为隐藏标签而逃过全文计数。
+    render = mistune.create_markdown(escape=True, plugins=["table"])
+    parser = VisibleText()
+    parser.feed(render(markdown))
+    visible = "".join(parser.visible)
+    pairs = PAIR.findall(visible)
+    banned = [phrase for phrase in BANNED if phrase in visible]
+    prose = "".join(parser.prose)
+    review = []
+    for rule, pattern, question in RULES:
+        hits = []
+        for sentence in re.split(r"[。！？!?；;\r\n]", prose):
+            if re.search(pattern, sentence):
+                hits.append(sentence.strip())
+        if hits:
+            review.append({"rule": rule, "passages": list(dict.fromkeys(hits)), "question": question})
+    blocked = len(pairs) >= 2 or bool(banned)
+    return {
+        "status": "blocked" if blocked else "review" if review else "clear",
+        "pairs": {"count": len(pairs), "matches": pairs},
+        "banned": banned,
+        "review": review,
+        "next": "改写命中的禁用措辞或重复对比后重测。" if blocked else "结合写作方法判断全文与提示项；修改则重测，未修改则交付受检原文。",
+    }, 1 if blocked else 0
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("input", nargs="?", default="-")
-    parser.add_argument("preview", nargs="?")
     args = parser.parse_args()
-    md = sys.stdin.read() if args.input == "-" else Path(args.input).read_text(encoding="utf-8")
-    if not md.strip():
-        raise ValueError("候选回复为空")
-
-    prose = re.sub(r"```.*?```", "", md, flags=re.S)
-    prose = re.sub(r"(?m)^\s*(?:[-*]|\d+[.)])\s+", "\n\n", prose)
-    pars = [p.strip() for p in re.split(r"\n\s*\n", prose) if p.strip()]
-    badp = []
-    bads = []
-    for i, p in enumerate(pars, 1):
-        count = len(re.findall(r"[。！？!?]", p))
-        if count > MAX_PARAGRAPH_SENTENCES:
-            badp.append({"paragraph": i, "text": p, "count": count,
-                         "limit": MAX_PARAGRAPH_SENTENCES})
-        for j, sentence in enumerate(re.split(r"[。！？!?]+", p), 1):
-            length = len(re.sub(r"[\W_]", "", sentence))
-            if length > MAX_SENTENCE_CHARS:
-                bads.append({"paragraph": i, "sentence": j, "text": sentence.strip(),
-                             "length": length, "limit": MAX_SENTENCE_CHARS})
-
-    fragment = html(md)
-    rendered = estimate(fragment)
-    pages = rendered["pages"]
-    negation_reviews = find_negation_reviews(rendered["text"])
-    negation_pairs = NEGATION_PAIR_PATTERN.findall(rendered["text"])
-
-    layout_issues = (["OVER_BUDGET"] if pages > MAX_PAGES else []) + (["OVER_DENSITY"] if badp or bads else [])
-    pair_issues = ["OVER_NEGATION_PAIRS"] if len(negation_pairs) >= 2 else []
-    hard_issues = layout_issues + pair_issues
-    issues = hard_issues + (["SELF_REVIEW_REQUIRED"] if negation_reviews else [])
-    if args.preview:
-        Path(args.preview).write_text(TPL.replace("{{CONTENT}}", fragment), encoding="utf-8")
-    result = {"verdict": "+".join(issues) or "PASS", "pages": pages, "paragraphs": badp, "sentences": bads,
-              "negation_pair_count": len(negation_pairs), "negation_pairs": negation_pairs,
-              "page_measurement": "estimated", "height_px": rendered["height_px"],
-              "page_height_px": rendered["page_height_px"],
-              "elapsed_ms": round((time.perf_counter() - STARTED) * 1000)}
-    actions = []
-    if pair_issues:
-        actions.append("不……而配对达到 2 对：按 negation_pairs 重写后重测至少于 2 对；高细节豁免和自审理由均不能放行。")
-    if pages > MAX_PAGES:
-        actions.append(f"回复估算为 {pages} 页，上限 {MAX_PAGES} 页；未获本轮高细节豁免时，缩减后重测。")
-    if badp or bads:
-        actions.append(
-            f"按 paragraphs 和 sentences 中的原文修改：每段最多 {MAX_PARAGRAPH_SENTENCES} 个句末标点，"
-            f"每句去掉空格和其他标点后最多 {MAX_SENTENCE_CHARS} 字；未获本轮高细节豁免时，修改后重测。"
-        )
-    if negation_reviews:
-        result["self_review"] = {"question": REVIEW_QUESTION, "items": negation_reviews,
-                                 "instructions": REVIEW_INSTRUCTIONS}
-        actions.append("结合当前对话，按 self_review 的要求逐项完成否定措辞自审。")
-    elif layout_issues and not pair_issues:
-        actions.append("若本轮已获高细节豁免，可直接发送当前候选；豁免条件见 SKILL.md 的边界。")
-    elif not hard_issues:
-        actions.append("发送当前候选回复。")
-    result["actions"] = actions
+    markdown = sys.stdin.read() if args.input == "-" else Path(args.input).read_text(encoding="utf-8-sig")
+    if not markdown.strip():
+        raise ValueError("候选正文为空")
+    result, code = check(markdown)
     print(json.dumps(result, ensure_ascii=False))
-    return 1 if hard_issues else 3 if negation_reviews else 0
+    return code
 
 
 if __name__ == "__main__":
     try:
         sys.exit(main())
     except Exception as error:
-        print(json.dumps({"verdict": "ERROR", "error": str(error),
-                          "actions": ["根据 error 修复问题后重新检查。"]},
-                         ensure_ascii=False))
+        print(json.dumps({"status": "error", "error": str(error), "next": "解决执行错误后重跑；无法执行则报告检查受阻。"}, ensure_ascii=False))
         sys.exit(2)
 ```
