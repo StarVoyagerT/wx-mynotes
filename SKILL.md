@@ -164,7 +164,7 @@ FORMAT_LABELS = {
     "list": "列表层级（- 或 1.）",
     "bold": "关键加粗（**...**）",
 }
-FORMAT_THRESHOLD = 300
+FORMAT_THRESHOLD = 500
 
 
 def lead_marker_check(body):
