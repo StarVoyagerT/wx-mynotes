@@ -1,11 +1,11 @@
 ---
-name: speak-properly-lite
-description: "用于 chatbot 中文回复的表达取舍与修订。起草时使用内嵌方法，发送前实际运行内嵌 Python 检查完整候选；不……而达到两对强制阻拦。静默使用。"
+name: speak-properly
+description: "用于 chatbot 中文回复的表达取舍与修订。起草时使用内嵌方法，发送前实际运行内嵌 Python 检查完整候选。"
 ---
 
 ```python
 #!/usr/bin/env python3
-# 好好说话 · Chatbot Lite
+# 好好说话 · Chatbot Version
 #
 # 适用：chatbot 生成或改写中文回复，包括解释、建议、讨论和交付说明。
 # 输入：当前用户请求、与请求有关的已有对话和待发送的完整回复。
