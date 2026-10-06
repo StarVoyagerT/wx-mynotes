@@ -26,22 +26,9 @@ description: "用于 chatbot 中文回复的表达取舍与修订。起草时使
 #       外界热量仍会通过箱壁和门封进入，开门也会带进暖空气，所以温度会回升。
 # 理由：温度变化、启停条件和热量来源解释了现象；抽象名词本身没有解释这些关系。
 #
-# 判断一句补充是否保留：它会改变当前答案的含义、用户的选择或接下来的行动吗？
-# 相关条件写在相应结论旁。只因理论上可能存在而加入的旁支，通常可以删除。
-# 案例：日志显示导出任务在排队，实际执行速度正常，用户问为什么导出慢。
-# 坏稿：可能是队列、磁盘、网络或文件损坏，需要全面排查。
-# 好稿：时间主要花在排队上；任务开始执行后的速度正常。先处理队列积压。
-#       如果排队消失后仍然慢，再检查执行过程。
-# 理由：按已有证据安排判断；后续排查有明确触发条件，不把所有可能性摆成同等嫌疑。
-#
-# 对比、否定和边界应直接回答问题、表达影响判断的差异或条件，或纠正有依据的误解。
-# 都没有作用时直接说结论。保留有用关系，不能只换同义词来消掉命中。
-# 案例：用户问一次阴性结果能否彻底排除感染。
-# 可保留：一次阴性结果不能彻底排除感染，检测时机也会影响结果。
-# 理由：用户问的就是排除能力，限制直接回答问题。不能因出现否定就删掉必要条件。
 # 案例：用户只问备份放在哪里。
 # 坏稿：这不是迁移，而是备份；它不代表原文件被删除。
-# 好稿：备份在你指定的备份目录里。
+# 好稿：备份在你指定的目录 F:/ 里。
 # 理由：这段对比没有回答额外问题；若用户确实追问原文件是否还在，再据实回答。
 # 示例中的位置、日志和检测条件仅在各自假设中成立，实际回复必须使用当前任务资料。
 #
@@ -61,15 +48,19 @@ description: "用于 chatbot 中文回复的表达取舍与修订。起草时使
 # 好稿：会议记录已按议题整理，待办列在文末。负责人未明确的事项已标出。
 # 理由：结果和待办状态影响使用；无关操作清单占用注意力。实际没有待办时不要照抄。
 #
+# 总结提示词只允许出现在首个可见正文行。这里的正文行排除 Markdown 标题、引用块和
+# 代码块。若“简而言之、总结来说、核心是、一句话、概括、准确地、结论”出现在后文，
+# 必须拦截：要么把对应结论提到首个可见正文行，要么删除提示词或整段重复内容。
+# 若把结论前移，必须继续检查后文是在补充新信息，还是只换说法复述；仅复述就删除。
+# 即使提示词已经位于首个可见正文行，也要判断去掉提示词、只保留结论本身是否更简洁
+# 干练；如果含义和语气不受损，就删掉这些形式化用词。
+#
 # 运行约定
-# 使用沙箱已有 Python 3.9+ 和 mistune 3.x，将本代码块保存为 reply_check.py。
+# 将本代码块保存为 reply_check.py。
 # 成稿后必须实际执行：python3 reply_check.py reply.md，reply.md 为完整候选（UTF-8）。
 # blocked 必须改写，error 须修复后重跑；review 提示结合当前请求判断，可保留必要表达。
 # 按上述写作方法复核全文，clear 也不例外；正文改动后重测，通过后发送受检原文。
 # 改写须保留事实及必要原文，处理表达问题本身，禁止只改格式规避门禁。
-# 引用冲突或执行受阻无法解决时，只报告阻碍；不自行安装软件。
-# 长回复格式门禁：可见文本中的汉字和字母合计达到 300 时，必须出现 Markdown
-# 标题、关键加粗，以及至少一种列表层级（无序列表或数字有序列表）；缺项即 blocked。
 
 import argparse
 import json
@@ -81,23 +72,30 @@ from pathlib import Path
 
 class VisibleText(HTMLParser):
     BLOCKS = {"p", "div", "li", "blockquote", "pre", "tr", "h1", "h2", "h3", "h4", "h5", "h6"}
+    HEADINGS = {"h1", "h2", "h3", "h4", "h5", "h6"}
 
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.visible = []
         self.prose = []
+        self.body = []
         self.protected = 0
+        self.heading = 0
 
     def boundary(self):
         self.visible.append("\n")
         self.prose.append("\n")
+        self.body.append("\n")
 
     def handle_starttag(self, tag, attrs):
         if tag in self.BLOCKS or tag == "br":
             self.boundary()
+        if tag in self.HEADINGS:
+            self.heading += 1
         if tag in {"code", "pre", "blockquote"}:
             self.protected += 1
             self.prose.append("\n")
+            self.body.append("\n")
         if tag == "img":
             self.handle_data(dict(attrs).get("alt", ""))
 
@@ -105,6 +103,9 @@ class VisibleText(HTMLParser):
         if tag in {"code", "pre", "blockquote"}:
             self.protected = max(0, self.protected - 1)
             self.prose.append("\n")
+            self.body.append("\n")
+        if tag in self.HEADINGS:
+            self.heading = max(0, self.heading - 1)
         if tag in self.BLOCKS:
             self.boundary()
         elif tag in {"td", "th"}:
@@ -114,10 +115,13 @@ class VisibleText(HTMLParser):
         self.visible.append(data)
         if not self.protected:
             self.prose.append(data)
+            if not self.heading:
+                self.body.append(data)
 
 
 PAIR = re.compile(r"不[^不而。！？!?；;\r\n]{0,30}而")
 BANNED = ("你说得对", "过头了", "质疑地对", "还不能")
+LEAD_MARKERS = ("简而言之", "总结来说", "核心是", "一句话", "概括", "准确地", "结论")
 RULES = (
     ("intent", r"你(?:真正|实际)(?:想要|需要|关心|的问题)|你的(?:真正|实际)需求",
      "是否把推测的动机当成用户已表达的需求？依据不足就回到原问题。"),
@@ -128,6 +132,7 @@ RULES = (
     ("self_proof", r"(?:我已|已经|逐项|全部).{0,8}(?:检查|验证|核对)|没有(?:修改|删除|触碰)",
      "用户是否在问这项操作？汇报保留影响使用的结果和未完成事项。"),
 )
+
 
 def markdown_structure(markdown, mistune):
     ast = mistune.create_markdown(renderer="ast", plugins=["table"])(markdown)
@@ -153,12 +158,32 @@ def markdown_structure(markdown, mistune):
     visit(ast)
     return present
 
+
 FORMAT_LABELS = {
     "heading": "Markdown 标题（#）",
     "list": "列表层级（- 或 1.）",
     "bold": "关键加粗（**...**）",
 }
 FORMAT_THRESHOLD = 300
+
+
+def lead_marker_check(body):
+    lines = [line.strip() for line in body.splitlines() if line.strip()]
+    first_line = lines[0] if lines else ""
+    first_line_hits = [marker for marker in LEAD_MARKERS if marker in first_line]
+    off_first_line = []
+
+    for line_number, line in enumerate(lines[1:], start=2):
+        for marker in LEAD_MARKERS:
+            if marker in line:
+                off_first_line.append({"keyword": marker, "line": line_number, "text": line})
+
+    return {
+        "keywords": list(LEAD_MARKERS),
+        "first_body_line": first_line,
+        "first_line_hits": first_line_hits,
+        "off_first_line": off_first_line,
+    }
 
 
 def check(markdown):
@@ -171,6 +196,9 @@ def check(markdown):
     pairs = PAIR.findall(visible)
     banned = [phrase for phrase in BANNED if phrase in visible]
     prose = "".join(parser.prose)
+    body = "".join(parser.body)
+    lead_markers = lead_marker_check(body)
+
     review = []
     for rule, pattern, question in RULES:
         hits = []
@@ -179,6 +207,16 @@ def check(markdown):
                 hits.append(sentence.strip())
         if hits:
             review.append({"rule": rule, "passages": list(dict.fromkeys(hits)), "question": question})
+
+    if lead_markers["first_line_hits"]:
+        review.append({
+            "rule": "lead_marker_style",
+            "passages": [lead_markers["first_body_line"]],
+            "question": (
+                "首行的形式化提示词是否必要？如果去掉关键词、只保留结论会更简洁干练且不损失含义，就删掉关键词。"
+                "若这是从后文前移的结论，再检查后文是在补充新信息还是复述；仅复述则删除后文。"
+            ),
+        })
 
     letter_count = sum(char.isalpha() for char in visible)
     required = letter_count >= FORMAT_THRESHOLD
@@ -196,19 +234,28 @@ def check(markdown):
         if required and not present[name]
     ]
     formatting_blocked = bool(missing)
+    lead_marker_blocked = bool(lead_markers["off_first_line"])
+    wording_blocked = len(pairs) >= 2 or bool(banned)
+    blocked = lead_marker_blocked or formatting_blocked or wording_blocked
 
-    blocked = len(pairs) >= 2 or bool(banned) or formatting_blocked
+    next_steps = []
+    if lead_marker_blocked:
+        next_steps.append(
+            "将命中的总结提示词移到首个可见正文行或删除；若前移，检查后文是否只复述该结论，仅复述就删除。"
+            "前移后再判断去掉提示词是否更简洁，能删则删。"
+        )
     if formatting_blocked:
-        next_step = "补齐缺失的 Markdown 分层表达后重测：" + "、".join(missing) + "。"
-    elif len(pairs) >= 2 or banned:
-        next_step = "改写命中的禁用措辞或重复对比后重测。"
-    else:
-        next_step = "结合写作方法判断全文与提示项；修改则重测，未修改则交付受检原文。"
+        next_steps.append("补齐缺失的 Markdown 分层表达后重测：" + "、".join(missing) + "。")
+    if wording_blocked:
+        next_steps.append("改写命中的禁用措辞或重复对比后重测。")
+    if not blocked:
+        next_steps.append("结合写作方法判断全文与提示项；修改则重测，未修改则交付受检原文。")
 
     return {
         "status": "blocked" if blocked else "review" if review else "clear",
         "pairs": {"count": len(pairs), "matches": pairs},
         "banned": banned,
+        "lead_markers": lead_markers,
         "formatting": {
             "letter_count": letter_count,
             "threshold": FORMAT_THRESHOLD,
@@ -217,7 +264,7 @@ def check(markdown):
             "missing": missing,
         },
         "review": review,
-        "next": next_step,
+        "next": " ".join(next_steps),
     }, 1 if blocked else 0
 
 
@@ -239,5 +286,4 @@ if __name__ == "__main__":
     except Exception as error:
         print(json.dumps({"status": "error", "error": str(error), "next": "解决执行错误后重跑；无法执行则报告检查受阻。"}, ensure_ascii=False))
         sys.exit(2)
-
 ```
