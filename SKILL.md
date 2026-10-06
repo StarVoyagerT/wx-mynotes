@@ -68,7 +68,9 @@ description: "用于 chatbot 中文回复的表达取舍与修订。起草时使
 # 按上述写作方法复核全文，clear 也不例外；正文改动后重测，通过后发送受检原文。
 # 改写须保留事实及必要原文，处理表达问题本身，禁止只改格式规避门禁。
 # 引用冲突或执行受阻无法解决时，只报告阻碍；不自行安装软件。
-#
+# 长回复格式门禁：可见文本中的汉字和字母合计达到 300 时，必须出现 Markdown
+# 标题、关键加粗，以及至少一种列表层级（无序列表或数字有序列表）；缺项即 blocked。
+
 import argparse
 import json
 import re
@@ -116,7 +118,6 @@ class VisibleText(HTMLParser):
 
 PAIR = re.compile(r"不[^不而。！？!?；;\r\n]{0,30}而")
 BANNED = ("你说得对", "过头了", "质疑地对", "还不能")
-# 软提示只定位值得复核的文字；代码和块引用不参与，以免要求改写程序或引文。
 RULES = (
     ("intent", r"你(?:真正|实际)(?:想要|需要|关心|的问题)|你的(?:真正|实际)需求",
      "是否把推测的动机当成用户已表达的需求？依据不足就回到原问题。"),
@@ -128,11 +129,41 @@ RULES = (
      "用户是否在问这项操作？汇报保留影响使用的结果和未完成事项。"),
 )
 
+def markdown_structure(markdown, mistune):
+    ast = mistune.create_markdown(renderer="ast", plugins=["table"])(markdown)
+    present = {"heading": False, "unordered_list": False, "ordered_list": False, "bold": False}
+
+    def visit(nodes):
+        for node in nodes:
+            node_type = node.get("type")
+            attrs = node.get("attrs", {})
+            if node_type == "heading" and node.get("style") == "atx":
+                present["heading"] = True
+            elif node_type == "list":
+                if attrs.get("ordered"):
+                    present["ordered_list"] = True
+                elif node.get("bullet") == "-":
+                    present["unordered_list"] = True
+            elif node_type == "strong":
+                present["bold"] = True
+            children = node.get("children")
+            if children:
+                visit(children)
+
+    visit(ast)
+    return present
+
+FORMAT_LABELS = {
+    "heading": "Markdown 标题（#）",
+    "list": "列表层级（- 或 1.）",
+    "bold": "关键加粗（**...**）",
+}
+FORMAT_THRESHOLD = 300
+
 
 def check(markdown):
     import mistune
 
-    # 禁用原始 HTML，避免把候选内容解释为隐藏标签而逃过全文计数。
     render = mistune.create_markdown(escape=True, plugins=["table"])
     parser = VisibleText()
     parser.feed(render(markdown))
@@ -148,13 +179,45 @@ def check(markdown):
                 hits.append(sentence.strip())
         if hits:
             review.append({"rule": rule, "passages": list(dict.fromkeys(hits)), "question": question})
-    blocked = len(pairs) >= 2 or bool(banned)
+
+    letter_count = sum(char.isalpha() for char in visible)
+    required = letter_count >= FORMAT_THRESHOLD
+    structure = markdown_structure(markdown, mistune)
+    present = {
+        "heading": structure["heading"],
+        "list": structure["unordered_list"] or structure["ordered_list"],
+        "bold": structure["bold"],
+        "unordered_list": structure["unordered_list"],
+        "ordered_list": structure["ordered_list"],
+    }
+    missing = [
+        FORMAT_LABELS[name]
+        for name in ("heading", "list", "bold")
+        if required and not present[name]
+    ]
+    formatting_blocked = bool(missing)
+
+    blocked = len(pairs) >= 2 or bool(banned) or formatting_blocked
+    if formatting_blocked:
+        next_step = "补齐缺失的 Markdown 分层表达后重测：" + "、".join(missing) + "。"
+    elif len(pairs) >= 2 or banned:
+        next_step = "改写命中的禁用措辞或重复对比后重测。"
+    else:
+        next_step = "结合写作方法判断全文与提示项；修改则重测，未修改则交付受检原文。"
+
     return {
         "status": "blocked" if blocked else "review" if review else "clear",
         "pairs": {"count": len(pairs), "matches": pairs},
         "banned": banned,
+        "formatting": {
+            "letter_count": letter_count,
+            "threshold": FORMAT_THRESHOLD,
+            "required": required,
+            "present": present,
+            "missing": missing,
+        },
         "review": review,
-        "next": "改写命中的禁用措辞或重复对比后重测。" if blocked else "结合写作方法判断全文与提示项；修改则重测，未修改则交付受检原文。",
+        "next": next_step,
     }, 1 if blocked else 0
 
 
@@ -176,4 +239,5 @@ if __name__ == "__main__":
     except Exception as error:
         print(json.dumps({"status": "error", "error": str(error), "next": "解决执行错误后重跑；无法执行则报告检查受阻。"}, ensure_ascii=False))
         sys.exit(2)
+
 ```
